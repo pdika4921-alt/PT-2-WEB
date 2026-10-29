@@ -1,0 +1,184 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header & Export -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">Rekon Freelance</h1>
+      <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Monitoring pekerjaan eksekutor freelance (Kemitraan & Swakelola) Regional 2.</p>
+    </div>
+    <a href="/rekon-freelance/export" class="btn-pill" style="background:#FFFFFF;">
+      <i class="fa-solid fa-download"></i> Export CSV
+    </a>
+  </div>
+
+  <!-- 4 Kartu KPI -->
+  <div class="kpi-row" style="grid-template-columns: repeat(4, 1fr);">
+    <!-- KPI 1: Total Freelance -->
+    <div class="kpi-card">
+      <div class="kpi-label">TOTAL PEKERJAAN</div>
+      <div class="kpi-num"><%= totalCount %></div>
+      <div class="tick-bars">
+        <% for (let i = 0; i < 20; i++) { %>
+          <div class="tick-bar filled-navy" style="height: <%= 35 + (i * 17) % 65 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 2: Filtered -->
+    <div class="kpi-card">
+      <div class="kpi-label">DATA TERFILTER</div>
+      <div class="kpi-num" style="color:var(--accent);"><%= filteredCount %></div>
+      <div class="tick-bars">
+        <% for (let i = 0; i < 20; i++) { %>
+          <div class="tick-bar filled-orange" style="height: <%= 40 + (i * 23) % 60 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 3: Kemitraan -->
+    <div class="kpi-card">
+      <div class="kpi-label">KEMITRAAN</div>
+      <% const kemitraanPct = totalCount > 0 ? Math.round((kemitraanCount / totalCount) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--navy);"><%= kemitraanCount %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= kemitraanPct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledKem = Math.round((kemitraanPct * 20) / 100);
+          for (let i = 0; i < 20; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledKem ? 'filled-navy' : '' %>" style="height: <%= 30 + (i * 19) % 70 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 4: Swakelola -->
+    <div class="kpi-card">
+      <div class="kpi-label">SWAKELOLA</div>
+      <% const swakelolaPct = totalCount > 0 ? Math.round((swakelolaCount / totalCount) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--blue);"><%= swakelolaCount %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= swakelolaPct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledSwa = Math.round((swakelolaPct * 20) / 100);
+          for (let i = 0; i < 20; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledSwa ? 'filled-blue' : '' %>" style="height: <%= 45 + (i * 13) % 55 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu Tabel Data -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box"><i class="fa-solid fa-users-gear"></i></div>
+        <h2 class="card-title" style="font-size:22px;">Data Rekon Freelance</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);">
+        Hasil: <b><%= filteredCount %></b> pekerjaan
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="/rekon-freelance" class="filter-bar">
+      <input type="date" name="tgl_awal" class="filter-input" value="<%= query.tgl_awal %>" title="Tanggal Awal">
+      <span style="color:var(--ink-3); font-size:12px;">s/d</span>
+      <input type="date" name="tgl_akhir" class="filter-input" value="<%= query.tgl_akhir %>" title="Tanggal Akhir">
+
+      <!-- Klasifikasi Selector -->
+      <select name="klasifikasi" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua Klasifikasi Eksekutor</option>
+        <% allKlasifikasi.forEach(k => { %>
+          <option value="<%= k %>" <%= query.klasifikasi === k ? 'selected' : '' %>><%= k %></option>
+        <% }); %>
+      </select>
+
+      <input type="text" name="q" class="filter-input" style="min-width:240px;" placeholder="Cari ODP, teknisi, mitra…" value="<%= query.q %>">
+
+      <button type="submit" class="btn-pill btn-primary" style="height: 30px; padding:0 18px;">
+        <i class="fa-solid fa-filter"></i> Filter
+      </button>
+
+      <% if (query.tgl_awal || query.tgl_akhir || query.klasifikasi || query.q) { %>
+        <a href="/rekon-freelance" class="btn-pill" style="height: 30px; padding:0 14px;">Reset</a>
+      <% } %>
+    </form>
+
+    <!-- Tabel 14 Kolom -->
+    <div class="table-wrap">
+      <table class="data-table" id="main-data-table">
+        <thead>
+          <tr>
+            <th style="width:35px;">No</th>
+            <th>Tanggal</th>
+            <th>Regional</th>
+            <th>Witel / STO</th>
+            <th>HSA Area</th>
+            <th>Nama ODP</th>
+            <th>ID Valins</th>
+            <th>NIK / Nama Teknisi</th>
+            <th>Mitra</th>
+            <th>Klasifikasi Eksekutor</th>
+            <th>Klasifikasi Order</th>
+            <th>No Order</th>
+            <th style="text-align:center;">Status</th>
+            <th style="width:50px; text-align:center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach((r, idx) => { 
+            const eksekutor = (r.klasifikasi_eksekutor || '').toLowerCase();
+            const isKemitraan = eksekutor.includes('kemitraan');
+            const isSwakelola = eksekutor.includes('swakelola');
+          %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td><%= r.tanggal || '-' %></td>
+              <td><span class="pill pill-dark">REG 2</span></td>
+              <td><span class="chip-tag"><%= r.sto || '-' %></span></td>
+              <td><%= r.hsa_area || '-' %></td>
+              <td class="mono font-semibold"><b><%= r.nama_odp %></b></td>
+              <td class="mono"><%= r.id_valins || '-' %></td>
+              <td><b><%= r.teknisi || '-' %></b></td>
+              <td><%= r.mitra || '-' %></td>
+              <td>
+                <% if (isKemitraan) { %>
+                  <span class="pill pill-dark">Kemitraan</span>
+                <% } else if (isSwakelola) { %>
+                  <span class="pill pill-blue">Swakelola</span>
+                <% } else { %>
+                  <span class="pill pill-outline"><%= r.klasifikasi_eksekutor || '-' %></span>
+                <% } %>
+              </td>
+              <td><%= r.klasifikasi_order || 'Reguler' %></td>
+              <td class="mono"><%= r.no_order || '-' %></td>
+              <td style="text-align:center;">
+                <span class="pill <%= r.status_validasi === 'valid' ? 'pill-dark' : 'pill-outline' %>">
+                  <%= r.status_validasi %>
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <a href="/rekon-freelance/detail/<%= r.id %>" class="btn-circle" title="Lihat Detail Validasi" aria-label="Lihat Detail">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% if (rows.length === 0) { %>
+            <tr class="no-paginate">
+              <td colspan="14" style="text-align:center; padding: 22px; color:var(--ink-2);">
+                Tidak ada data rekon freelance yang sesuai.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<%- include('partials/footer') %>

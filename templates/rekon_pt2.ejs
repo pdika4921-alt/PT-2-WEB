@@ -1,0 +1,687 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">Rekon PT2 — Eviden Pekerjaan</h1>
+      <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Kelola 8 foto eviden pekerjaan per ODP, edit via Photopea, kamera, dan generate Word dokumen.</p>
+    </div>
+  </div>
+
+  <!-- Kartu Atas: Textarea & Aksi -->
+  <div class="card">
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <label for="rekonOdpList" style="font-size:12px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:0.5px;">
+        Daftar ODP Rekon (Pisahkan dengan baris baru)
+      </label>
+      <textarea 
+        id="rekonOdpList" 
+        style="width:100%; height:75px; background:#F3F4F6; border:1px solid transparent; border-radius:20px; padding:12px 18px; font-family:'JetBrains Mono', monospace; font-size:13px; outline:none; resize:vertical;" 
+        placeholder="ODP-BKS-014&#10;ODP-JTN-007&#10;ODP-CKR-021"
+      ></textarea>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:10px;">
+          <button type="button" id="btnLoadRekon" class="btn-pill btn-primary">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Load Data
+          </button>
+          <button type="button" id="btnLoadSheet" class="btn-pill" style="background:#FFFFFF;">
+            <i class="fa-solid fa-table-cells"></i> Load dari Sheet (RESPON VALID 4)
+          </button>
+          <button type="button" id="btnSaveAll" class="btn-pill" style="background:#FFFFFF;">
+            <i class="fa-solid fa-floppy-disk"></i> Save All
+          </button>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input
+            type="text"
+            id="rekonDocTitle"
+            class="filter-input"
+            placeholder="Judul dokumen (default: masterpt2)"
+            style="min-width:250px;"
+          >
+          <button type="button" id="btnGenerateWord" class="btn-pill btn-accent">
+            <i class="fa-solid fa-file-word"></i> Generate Word (Docx)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu Tabel Rekon 12 Kolom -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box"><i class="fa-solid fa-images"></i></div>
+        <h2 class="card-title" style="font-size:20px;">Matriks Eviden Foto (8 Kategori)</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);" id="rekonStatusText">
+        Belum ada data dimuat
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="rekonTable" style="font-size:11.5px;">
+        <thead>
+          <tr style="background:#DC2626; color:#FFFFFF;">
+            <th style="background:#DC2626; color:#FFFFFF; width:35px;">No</th>
+            <th style="background:#DC2626; color:#FFFFFF;">NAMA ODP</th>
+            <th style="background:#DC2626; color:#FFFFFF;">NAMA LOP</th>
+            <th style="background:#DC2626; color:#FFFFFF;">BRANCH-STO</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">Foto ODP Luar</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">Foto ODP Dalam</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">Joint Closure</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">PS 1:4</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">Foto Lengkap</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">UFO / OPM</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">SIVDUM</th>
+            <th style="background:#DC2626; color:#FFFFFF; text-align:center;">Mancore</th>
+          </tr>
+        </thead>
+        <tbody id="rekonTableBody">
+          <!-- Populated dynamically via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pencarian + Pagination (mode Sheet) -->
+    <div id="rekonSheetBar" style="display:none; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; flex-wrap:wrap;">
+      <input type="text" id="rekonSearch" class="filter-input" placeholder="Cari nama ODP di sheet..." style="min-width:230px;">
+      <div id="rekonPager" class="pagination" style="margin-top:0;"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL PHOTOPEA EDITOR (Gelap 98vw x 95vh) -->
+<div id="photopeaModal" class="modal-backdrop" style="backdrop-filter:blur(10px);">
+  <div style="width:98vw; height:95vh; background:#1E1E1E; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 25px 80px rgba(0,0,0,0.5);">
+    <div style="height:48px; background:#2D2D2D; display:flex; justify-content:space-between; align-items:center; padding:0 20px; color:#FFFFFF;">
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600;">
+        <i class="fa-solid fa-paintbrush" style="color:var(--accent);"></i>
+        <span id="photopeaTitle">Edit Foto — Photopea</span>
+      </div>
+      <button type="button" class="btn-circle" onclick="closePhotopea()" style="background:#3D3D3D; border:none; color:#FFFFFF;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <iframe id="photopeaIframe" src="" style="width:100%; height:calc(100% - 48px); border:none;"></iframe>
+  </div>
+</div>
+
+<!-- MODAL KAMERA (getUserMedia 1920x1080) -->
+<div id="cameraModal" class="modal-backdrop">
+  <div class="modal-content" style="max-width:640px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:16px; font-weight:600;"><i class="fa-solid fa-camera"></i> Ambil Foto Kamera</h3>
+      <button type="button" class="btn-circle" onclick="closeCamera()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div style="position:relative; background:#000; border-radius:16px; overflow:hidden; height:340px; display:flex; align-items:center; justify-content:center;">
+      <video id="cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+      <canvas id="cameraCanvas" style="display:none;"></canvas>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+      <button type="button" id="btnToggleFacing" class="btn-pill" style="background:#FFFFFF;">
+        <i class="fa-solid fa-arrows-rotate"></i> Ganti Kamera
+      </button>
+      <button type="button" id="btnSnapPhoto" class="btn-pill btn-accent">
+        <i class="fa-solid fa-circle-dot"></i> Ambil Foto
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for upload -->
+<input type="file" id="globalImageInput" accept="image/*" style="display:none;">
+
+<!-- LOADING OVERLAY PROSES REKON -->
+<div id="rekonLoading" class="modal-backdrop" style="backdrop-filter:blur(6px);">
+  <div style="background:#FFFFFF; border-radius:20px; padding:30px 40px; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow:0 20px 60px rgba(0,0,0,0.25); min-width:300px;">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size:30px; color:var(--accent);"></i>
+    <div id="rekonLoadingText" style="font-size:14px; font-weight:600; color:var(--ink); text-align:center;">Memproses data...</div>
+    <div style="font-size:12px; color:var(--ink-2); text-align:center;">Mohon tunggu, proses berjalan sampai selesai.</div>
+  </div>
+</div>
+
+<script>
+  const rekonLoading = document.getElementById('rekonLoading');
+  const rekonLoadingText = document.getElementById('rekonLoadingText');
+
+  function showRekonLoading(text) {
+    rekonLoadingText.textContent = text || 'Memproses data...';
+    rekonLoading.classList.add('show');
+  }
+
+  function hideRekonLoading() {
+    rekonLoading.classList.remove('show');
+  }
+
+  let activeTarget = { odpName: '', field: '' };
+  let cameraStream = null;
+  let currentFacingMode = 'environment';
+
+  const PHOTO_FIELDS = [
+    { key: 'foto_odp_luar', label: 'Foto ODP Tampak Luar' },
+    { key: 'foto_odp_dalam', label: 'Foto ODP Tampak Dalam' },
+    { key: 'foto_joint_closure', label: 'Foto Joint Closure' },
+    { key: 'foto_ps_1_4', label: 'Foto PS 1:4' },
+    { key: 'foto_lengkap', label: 'Foto Lengkap' },
+    { key: 'foto_ufo_opm', label: 'Foto UFO/OPM' },
+    { key: 'foto_sivdum', label: 'Foto SIVDUM' },
+    { key: 'foto_mancore', label: 'Mancore' }
+  ];
+
+  let currentOdpData = [];
+
+  // State mode Sheet (RESPON VALID 4)
+  let sheetData = [];
+  let sheetMode = false;
+  let sheetPage = 1;
+  let sheetSize = 10;
+  let sheetFilter = '';
+
+  async function loadOdpData() {
+    const text = document.getElementById('rekonOdpList').value;
+    const odpList = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+    if (odpList.length === 0) {
+      showToast('Masukkan minimal satu nama ODP', 'error');
+      return;
+    }
+
+    const tbody = document.getElementById('rekonTableBody');
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data ODP...</td></tr>`;
+    showRekonLoading('Memuat data ODP... mohon tunggu sampai selesai');
+
+    currentOdpData = [];
+
+    try {
+      for (let i = 0; i < odpList.length; i++) {
+        const odp = odpList[i];
+        try {
+          const res = await fetch(`/rekon/api/odp?odp=${encodeURIComponent(odp)}`);
+          const json = await res.json();
+          if (json.ok) {
+            currentOdpData.push({
+              no: i + 1,
+              odp_name: odp,
+              id_nama_lop: json.db?.nama_lop || json.rekon?.id_nama_lop || 'LOP-' + odp,
+              witel_sto: json.db?.sto || json.rekon?.witel_sto || 'BKS',
+              photos: json.photos || {}
+            });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    } finally {
+      hideRekonLoading();
+    }
+
+    renderRekonTable();
+    showToast(`Berhasil memuat ${currentOdpData.length} data ODP`, 'ok');
+  }
+
+  function photoCellsHtml(item) {
+    return PHOTO_FIELDS.map(f => {
+      const url = item.photos[f.key] || '';
+      return `
+        <td style="padding:6px; text-align:center;">
+          <div style="width:90px; height:110px; background:#F0F2F5; border-radius:14px; margin:auto; display:flex; flex-direction:column; justify-content:space-between; padding:4px; position:relative; overflow:hidden; border:1px solid #E4E7EB;">
+            ${url ? `<img src="${url}" loading="lazy" style="width:100%; height:75px; object-fit:cover; border-radius:10px; cursor:pointer;" onclick="openImageModal('${url}', '${item.odp_name} - ${f.label}')" alt="Foto" onerror="this.style.display='none'">` : `<div style="flex:1; display:flex; align-items:center; justify-content:center; color:#9AA1AE; font-size:11px;">-</div>`}
+            <div style="display:flex; justify-content:center; gap:4px; margin-top:2px;">
+              <button type="button" class="btn-circle" style="width:24px; height:24px; font-size:9px;" title="Upload" onclick="triggerUpload('${item.odp_name}', '${f.key}')"><i class="fa-solid fa-upload"></i></button>
+              <button type="button" class="btn-circle" style="width:24px; height:24px; font-size:9px;" title="Photopea" onclick="openPhotopea('${item.odp_name}', '${f.key}', ${url ? `new URL('${url}', location.origin).href` : `''`})"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+              <button type="button" class="btn-circle" style="width:24px; height:24px; font-size:9px;" title="Kamera" onclick="openCamera('${item.odp_name}', '${f.key}')"><i class="fa-solid fa-camera"></i></button>
+              ${url ? `<button type="button" class="btn-circle" style="width:24px; height:24px; font-size:9px; color:var(--bad);" title="Hapus" onclick="removePhoto('${item.odp_name}', '${f.key}')"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </div>
+          </div>
+        </td>
+      `;
+    }).join('');
+  }
+
+  function rowHtml(item, no) {
+    return `
+      <tr data-odp="${item.odp_name}">
+        <td>${no}</td>
+        <td class="mono font-semibold"><b>${item.odp_name}</b></td>
+        <td class="mono" style="font-size:11px;">${item.id_nama_lop}</td>
+        <td><span class="chip-tag">${item.witel_sto}</span></td>
+        ${photoCellsHtml(item)}
+      </tr>
+    `;
+  }
+
+  function setSheetMode(on) {
+    sheetMode = on;
+    document.getElementById('rekonSheetBar').style.display = on ? 'flex' : 'none';
+    if (!on) document.getElementById('rekonPager').innerHTML = '';
+  }
+
+  function renderRekonTable() {
+    setSheetMode(false);
+    const tbody = document.getElementById('rekonTableBody');
+    if (currentOdpData.length === 0) {
+      tbody.innerHTML = '';
+      document.getElementById('rekonStatusText').textContent = 'Belum ada data dimuat';
+      return;
+    }
+    tbody.innerHTML = currentOdpData.map((item, idx) => rowHtml(item, idx + 1)).join('');
+  }
+
+  // ===== MODE SHEET: ambil dari Google Sheet RESPON VALID 4 =====
+  async function loadFromSheet() {
+    const tbody = document.getElementById('rekonTableBody');
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Mengambil data dari sheet RESPON VALID 4...</td></tr>`;
+    document.getElementById('rekonStatusText').textContent = 'Mengambil data dari sheet...';
+    showRekonLoading('Mengambil data dari sheet RESPON VALID 4... mohon tunggu sampai selesai');
+
+    try {
+      const res = await fetch('/rekon/api/sheet-list');
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Gagal mengambil data');
+
+      sheetData = json.rows.map(r => ({
+        no: r.no,
+        odp_name: r.odp,
+        id_nama_lop: r.id_lop,
+        witel_sto: r.sto,
+        teknisi: r.teknisi,
+        district: r.district,
+        tanggal: r.tanggal,
+        photos: r.photos || {}
+      }));
+      sheetFilter = '';
+      document.getElementById('rekonSearch').value = '';
+      sheetPage = 1;
+      setSheetMode(true);
+      renderSheet();
+      document.getElementById('rekonStatusText').textContent = `Sheet RESPON VALID 4 — ${json.total} baris`;
+      showToast(`Memuat ${json.total} ODP dari sheet RESPON VALID 4`, 'ok');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--bad);">Gagal mengambil data sheet: ${e.message}</td></tr>`;
+      showToast('Gagal mengambil data sheet: ' + e.message, 'error');
+    } finally {
+      hideRekonLoading();
+    }
+  }
+
+  function filteredSheet() {
+    if (!sheetFilter) return sheetData;
+    return sheetData.filter(r => (r.odp_name || '').toLowerCase().includes(sheetFilter));
+  }
+
+  // Cari item di data aktif (manual maupun sheet)
+  function findActiveItem(odpName) {
+    return currentOdpData.find(d => d.odp_name === odpName)
+      || sheetData.find(d => d.odp_name === odpName);
+  }
+
+  function refreshActiveTable() {
+    if (sheetMode) renderSheet();
+    else renderRekonTable();
+  }
+
+  function renderSheet() {
+    const rows = filteredSheet();
+    const totalPages = Math.max(1, Math.ceil(rows.length / sheetSize));
+    sheetPage = Math.min(Math.max(sheetPage, 1), totalPages);
+    const start = (sheetPage - 1) * sheetSize;
+    const slice = rows.slice(start, start + sheetSize);
+
+    const tbody = document.getElementById('rekonTableBody');
+    if (slice.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--ink-2);">Tidak ada data ODP yang cocok.</td></tr>`;
+    } else {
+      tbody.innerHTML = slice.map((it, i) => rowHtml(it, start + i + 1)).join('');
+    }
+    renderSheetPager(totalPages, rows.length);
+  }
+
+  function renderSheetPager(totalPages, totalRows) {
+    const box = document.getElementById('rekonPager');
+    box.innerHTML = '';
+
+    const info = document.createElement('span');
+    info.style.cssText = 'font-size:11px; color:var(--ink-2); font-weight:600; margin-right:8px;';
+    info.textContent = `${totalRows} baris`;
+    box.appendChild(info);
+
+    const mkBtn = (content, disabled, onclick, active) => {
+      const b = document.createElement('button');
+      b.className = 'page-btn' + (active ? ' active' : '');
+      b.innerHTML = content;
+      b.disabled = disabled;
+      b.onclick = onclick;
+      return b;
+    };
+
+    box.appendChild(mkBtn('<i class="fa-solid fa-chevron-left"></i>', sheetPage === 1, () => { sheetPage--; renderSheet(); }));
+
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || (p >= sheetPage - 1 && p <= sheetPage + 1)) {
+        box.appendChild(mkBtn(String(p), false, () => { sheetPage = p; renderSheet(); }, p === sheetPage));
+      } else if (p === sheetPage - 2 || p === sheetPage + 2) {
+        const dots = document.createElement('span');
+        dots.textContent = '…';
+        dots.style.cssText = 'padding:0 4px; color:#9AA1AE; font-size:12px;';
+        box.appendChild(dots);
+      }
+    }
+
+    box.appendChild(mkBtn('<i class="fa-solid fa-chevron-right"></i>', sheetPage === totalPages, () => { sheetPage++; renderSheet(); }));
+
+    const sel = document.createElement('select');
+    sel.className = 'page-size-select';
+    [10, 25, 50].forEach(n => {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      if (n === sheetSize) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => { sheetSize = parseInt(sel.value, 10); sheetPage = 1; renderSheet(); };
+    const wrap = document.createElement('span');
+    wrap.className = 'page-size';
+    wrap.style.marginRight = '0';
+    wrap.style.marginLeft = '8px';
+    const lbl = document.createElement('label');
+    lbl.textContent = 'Baris:';
+    wrap.appendChild(lbl);
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
+  }
+
+  function triggerUpload(odpName, field) {
+    activeTarget = { odpName, field };
+    const input = document.getElementById('globalImageInput');
+    input.value = '';
+    input.click();
+  }
+
+  document.getElementById('globalImageInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeTarget.odpName) return;
+
+    showToast('Mengunggah gambar...', 'normal');
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('odpName', activeTarget.odpName);
+    formData.append('field', activeTarget.field);
+
+    try {
+      const res = await fetch('/rekon/api/upload-foto', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Foto berhasil diunggah', 'ok');
+        const item = findActiveItem(activeTarget.odpName);
+        if (item) {
+          item.photos[activeTarget.field] = data.url;
+          refreshActiveTable();
+        }
+      } else {
+        showToast(data.error || 'Upload gagal', 'error');
+      }
+    } catch (err) {
+      showToast('Gagal mengunggah foto: ' + err.message, 'error');
+    }
+  });
+
+  async function removePhoto(odpName, field) {
+    if (!confirm('Hapus foto ini?')) return;
+    try {
+      const res = await fetch('/rekon/api/remove-foto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ odpName, field })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const item = findActiveItem(odpName);
+        if (item) {
+          item.photos[field] = '';
+          refreshActiveTable();
+        }
+        showToast('Foto berhasil dihapus', 'ok');
+      }
+    } catch (e) {
+      showToast('Gagal menghapus: ' + e.message, 'error');
+    }
+  }
+
+  // PHOTOPEA INTEGRATION
+  function openPhotopea(odpName, field, imgUrl) {
+    activeTarget = { odpName, field };
+    document.getElementById('photopeaTitle').textContent = `Edit Foto — ${odpName} (${field})`;
+    const modal = document.getElementById('photopeaModal');
+    const iframe = document.getElementById('photopeaIframe');
+
+    const config = {
+      files: imgUrl ? [imgUrl] : [],
+      environment: {
+        theme: 2,
+        customIO: {
+          save: 'app.activeDocument.saveToOE("jpg")'
+        }
+      }
+    };
+
+    iframe.src = `https://www.photopea.com#${encodeURIComponent(JSON.stringify(config))}`;
+    modal.classList.add('show');
+  }
+
+  function closePhotopea() {
+    document.getElementById('photopeaModal').classList.remove('show');
+    document.getElementById('photopeaIframe').src = '';
+  }
+
+  // Receive postMessage from Photopea
+  window.addEventListener('message', async (e) => {
+    if (e.data instanceof ArrayBuffer && activeTarget.odpName) {
+      showToast('Menyimpan hasil edit Photopea...', 'normal');
+      const blob = new Blob([e.data], { type: 'image/jpeg' });
+      const formData = new FormData();
+      formData.append('image', blob, 'photopea.jpg');
+      formData.append('odpName', activeTarget.odpName);
+      formData.append('field', activeTarget.field);
+
+      const res = await fetch('/rekon/api/upload-foto', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Hasil edit berhasil disimpan', 'ok');
+        const item = findActiveItem(activeTarget.odpName);
+        if (item) {
+          item.photos[activeTarget.field] = data.url;
+          refreshActiveTable();
+        }
+        closePhotopea();
+      }
+    }
+  });
+
+  // KAMERA GETUSERMEDIA (1920x1080)
+  async function openCamera(odpName, field) {
+    activeTarget = { odpName, field };
+    const modal = document.getElementById('cameraModal');
+    modal.classList.add('show');
+
+    try {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+      }
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: currentFacingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      document.getElementById('cameraVideo').srcObject = cameraStream;
+    } catch (err) {
+      showToast('Akses kamera tidak tersedia atau ditolak: ' + err.message, 'error');
+    }
+  }
+
+  function closeCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    document.getElementById('cameraModal').classList.remove('show');
+  }
+
+  document.getElementById('btnToggleFacing').addEventListener('click', async () => {
+    currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+    if (activeTarget.odpName) {
+      openCamera(activeTarget.odpName, activeTarget.field);
+    }
+  });
+
+  document.getElementById('btnSnapPhoto').addEventListener('click', async () => {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      showToast('Menyimpan jepretan kamera...', 'normal');
+      const formData = new FormData();
+      formData.append('image', blob, 'camera_snap.jpg');
+      formData.append('odpName', activeTarget.odpName);
+      formData.append('field', activeTarget.field);
+
+      const res = await fetch('/rekon/api/upload-foto', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Foto kamera berhasil disimpan', 'ok');
+        const item = findActiveItem(activeTarget.odpName);
+        if (item) {
+          item.photos[activeTarget.field] = data.url;
+          refreshActiveTable();
+        }
+        closeCamera();
+      }
+    }, 'image/jpeg', 0.9);
+  });
+
+  // URL proxy (/api/proxy-image?url=...) → URL asli agar aman disimpan ke DB
+  function rawPhotoUrl(u) {
+    if (!u) return '';
+    if (u.startsWith('/api/proxy-image')) {
+      try {
+        return new URL(u, location.origin).searchParams.get('url') || '';
+      } catch (e) { return ''; }
+    }
+    return u;
+  }
+
+  // SAVE ALL
+  document.getElementById('btnSaveAll').addEventListener('click', async () => {
+    const source = sheetMode ? sheetData : currentOdpData;
+    if (source.length === 0) {
+      showToast('Tidak ada data untuk disimpan', 'error');
+      return;
+    }
+
+    showToast('Menyimpan seluruh data rekon...', 'normal');
+    showRekonLoading('Menyimpan seluruh data rekon... mohon tunggu sampai selesai');
+    try {
+      for (const item of source) {
+        if (!item.odp_name) continue;
+        const photos = {};
+        for (const [k, v] of Object.entries(item.photos || {})) {
+          photos[k] = rawPhotoUrl(v);
+        }
+        await fetch('/rekon/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            odpName: item.odp_name,
+            data: photos
+          })
+        });
+      }
+      showToast('Semua perubahan berhasil disimpan ke database!', 'ok');
+    } catch (err) {
+      showToast('Gagal menyimpan: ' + err.message, 'error');
+    } finally {
+      hideRekonLoading();
+    }
+  });
+
+  // GENERATE WORD
+  document.getElementById('btnGenerateWord').addEventListener('click', async () => {
+    // Sumber data: mode sheet (RESPON VALID 4) atau data manual yang dimuat
+    const source = sheetMode ? filteredSheet() : currentOdpData;
+    if (source.length === 0) {
+      showToast('Muat minimal satu ODP sebelum generate Word', 'error');
+      return;
+    }
+
+    showToast('Membuat dokumen Word (Docx)...', 'normal');
+    showRekonLoading('Membuat dokumen Word (Docx)... mohon tunggu sampai selesai, foto sedang diproses');
+    const odpList = source.map(d => d.odp || d.odp_name).filter(Boolean);
+
+    try {
+      const res = await fetch('/rekon/api/generate-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          odpList,
+          title: (document.getElementById('rekonDocTitle')?.value || '').trim()
+        })
+      });
+
+      if (!res.ok) {
+        let msg = 'Server error ' + res.status;
+        try {
+          const j = await res.json();
+          if (j && j.error) msg = j.error;
+        } catch (e) { /* respons bukan JSON */ }
+        throw new Error(msg);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `REKON_PT2_${Date.now()}.docx`;
+      a.click();
+      showToast('Dokumen Word berhasil diunduh', 'ok');
+    } catch (err) {
+      showToast('Gagal generate Word: ' + err.message, 'error');
+    } finally {
+      hideRekonLoading();
+    }
+  });
+
+  document.getElementById('btnLoadRekon').addEventListener('click', loadOdpData);
+  document.getElementById('btnLoadSheet').addEventListener('click', loadFromSheet);
+  document.getElementById('rekonSearch').addEventListener('input', (e) => {
+    sheetFilter = e.target.value.trim().toLowerCase();
+    sheetPage = 1;
+    if (sheetMode) renderSheet();
+  });
+
+  // Awal halaman: tampilkan keadaan kosong (tanpa auto-load data)
+  renderRekonTable();
+</script>
+
+<%- include('partials/footer') %>

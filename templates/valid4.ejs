@@ -1,0 +1,317 @@
+<%- include('partials/topnav') %>
+
+<%
+  // Aman walau variable tidak dikirim oleh route (mis. proses server masih kode lama)
+  const _odpList = (typeof odpList !== 'undefined' && Array.isArray(odpList)) ? odpList : [];
+  const _missing = (typeof missing !== 'undefined' && Array.isArray(missing)) ? missing : [];
+  const _filtered = (typeof filtered !== 'undefined') ? filtered : _odpList.length > 0;
+%>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">VALID 4 — Management Core FO</h1>
+      <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Generator dokumen manajemen core FO (PDF, Excel, Gambar) untuk ODP tervalidasi.</p>
+    </div>
+  </div>
+
+  <!-- Kartu Atas: Input ODP & Action -->
+  <div class="card">
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <label for="odpListInput" style="font-size:12px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:0.5px;">
+        Daftar Nama ODP (Pisahkan dengan baris baru atau koma)
+      </label>
+      <textarea 
+        id="odpListInput" 
+        style="width:100%; height:80px; background:#F3F4F6; border:1px solid transparent; border-radius:20px; padding:12px 18px; font-family:'JetBrains Mono', monospace; font-size:13px; outline:none; resize:vertical;" 
+        placeholder="Contoh:&#10;ODP-BKS-014&#10;ODP-JTN-007&#10;ODP-KBY-005"
+      ><%= _odpList.join('\n') %></textarea>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" id="btnLoadData" class="btn-pill btn-primary">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Load Data
+          </button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+          <!-- Dropdown Generate -->
+          <div style="position:relative; display:inline-block;">
+            <select id="generateSelect" class="filter-input" style="font-weight:600; cursor:pointer; background:#FFFFFF; border:1px solid var(--line); height:42px; padding:0 16px;">
+              <option value="" disabled selected>Pilih Format Generate ▾</option>
+              <option value="pdf_foto">PDF + Foto</option>
+              <option value="pdf_nofoto">PDF Tanpa Foto</option>
+              <option value="excel_foto">Excel + Foto</option>
+              <option value="excel_nofoto">Excel Tanpa Foto</option>
+              <option value="excel_table">Excel Table Only</option>
+              <option value="image">Download as Image</option>
+            </select>
+          </div>
+
+          <button type="button" id="btnRunGenerate" class="btn-pill btn-accent" style="height:42px;">
+            <i class="fa-solid fa-file-export"></i> Eksekusi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu Tabel 22 Kolom (Header Merah #DC2626 teks putih) -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box"><i class="fa-solid fa-network-wired"></i></div>
+        <h2 class="card-title" style="font-size:20px;">Tabel Form Mancore</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);">
+        <% if (_filtered) { %>
+          Data dimuat: <b><%= rows.length %></b> item
+          <span style="color:var(--ink-2);">dari <%= _odpList.length %> nama ODP</span>
+          <% if (_missing.length) { %>
+            <span style="color:#DC2626;"> — <%= _missing.length %> tidak ditemukan</span>
+          <% } %>
+        <% } else { %>
+          Belum ada data dimuat
+        <% } %>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="valid4-table" style="font-size:11.5px;">
+        <thead>
+          <tr style="background:#155724; color:#FFFFFF;">
+            <th rowspan="2" style="background:#155724; color:#FFFFFF; width:35px;">No</th>
+            <th colspan="1" style="background:#155724; color:#FFFFFF;">MDF STO</th>
+            <th colspan="3" style="background:#155724; color:#FFFFFF;">GPON</th>
+            <th colspan="2" style="background:#155724; color:#FFFFFF;">FTM</th>
+            <th colspan="1" style="background:#155724; color:#FFFFFF;">DISTRIBUSI</th>
+            <th colspan="6" style="background:#155724; color:#FFFFFF;">ODP</th>
+            <th colspan="2" style="background:#155724; color:#FFFFFF;">KORDINAT</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF;">VALINS</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF;">District</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF;">Teknisi</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF;">Mitra</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF;">Status</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF; text-align:center;">Thumbnail Eviden</th>
+            <th rowspan="2" style="background:#155724; color:#FFFFFF; width:50px; text-align:center;">Aksi</th>
+          </tr>
+          <tr style="background:#D4EDDA; color:#155724;">
+            <th style="background:#D4EDDA; color:#155724;">STO</th>
+            <th style="background:#D4EDDA; color:#155724;">IP OLT</th>
+            <th style="background:#D4EDDA; color:#155724;">Slot</th>
+            <th style="background:#D4EDDA; color:#155724;">Port</th>
+            <th style="background:#D4EDDA; color:#155724;">EA</th>
+            <th style="background:#D4EDDA; color:#155724;">OA</th>
+            <th style="background:#D4EDDA; color:#155724;">Slot Out</th>
+            <th style="background:#D4EDDA; color:#155724;">Label ODP</th>
+            <th style="background:#D4EDDA; color:#155724;">Core Feeder ODC</th>
+            <th style="background:#D4EDDA; color:#155724;">KAP</th>
+            <th style="background:#D4EDDA; color:#155724;">DS</th>
+            <th style="background:#D4EDDA; color:#155724;">Core</th>
+            <th style="background:#D4EDDA; color:#155724;">Passive</th>
+            <th style="background:#D4EDDA; color:#155724;">LAT</th>
+            <th style="background:#D4EDDA; color:#155724;">LONG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach((r, idx) => { %>
+            <tr data-odp="<%= r.nama_odp %>" data-id="<%= r.id %>">
+              <td><%= idx + 1 %></td>
+              <td><%= r.sto || '-' %></td>
+              <td class="mono"><%= r.ip_olt || '-' %></td>
+              <td><%= r.slot_olt || '-' %></td>
+              <td><%= r.port_olt || '-' %></td>
+              <td><input type="text" class="cell-input ea-input" value="<%= r.ea_ftm || '' %>" style="width:65px; padding:3px 6px; border:1px solid #ddd; border-radius:6px; font-size:11px;"></td>
+              <td><input type="text" class="cell-input oa-input" value="<%= r.oa_ftm || '' %>" style="width:65px; padding:3px 6px; border:1px solid #ddd; border-radius:6px; font-size:11px;"></td>
+              <td><%= r.slot_out || '1:4' %></td>
+              <td class="mono font-semibold"><b><%= r.nama_odp %></b></td>
+              <td><input type="text" class="cell-input core-feeder-input" value="<%= r.core_feeder || r.core_distribusi || '' %>" style="width:50px; padding:3px 6px; border:1px solid #ddd; border-radius:6px; font-size:11px;"></td>
+              <td><%= r.kapasitas_kabel || '24 Core' %></td>
+              <td><%= r.distribusi || 'DS-01' %></td>
+              <td><%= r.core_distribusi || '1' %></td>
+              <td><%= r.tipe_splitter || '-' %></td>
+              <td class="mono"><%= r.latitude || '-' %></td>
+              <td class="mono"><%= r.longitude || '-' %></td>
+              <td class="mono"><%= r.id_valins || '-' %></td>
+              <td><%= r.district || '-' %></td>
+              <td><%= r.teknisi || '-' %></td>
+              <td><%= r.mitra || '-' %></td>
+              <td><span class="pill pill-dark">VALID</span></td>
+              <td style="text-align:center;">
+                <% if (r.url_foto_eviden || r.eviden_odp_terbuka) { 
+                  const rawUrl = r.url_foto_eviden || r.eviden_odp_terbuka;
+                  const thumbUrl = rawUrl.startsWith('http')
+                    ? '/api/proxy-image?url=' + encodeURIComponent(rawUrl)
+                    : rawUrl;
+                %>
+                  <img src="<%= thumbUrl %>" style="width:44px; height:32px; object-fit:cover; border-radius:4px; cursor:pointer; border:1px solid #ddd;" onclick="openImageModal('<%= thumbUrl %>', '<%= r.nama_odp %>')" alt="Eviden" onerror="this.onerror=null; this.src='/uploads/placeholder.jpg'">
+                <% } else { %>
+                  <span class="pill pill-accent" style="font-size:9.5px;">NOT FOUND</span>
+                <% } %>
+              </td>
+              <td style="text-align:center;">
+                <a href="/valid4/detail/<%= r.id %>" class="btn-circle" title="Lihat Detail" aria-label="Lihat Detail">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% if (rows.length === 0) { %>
+            <tr class="no-paginate">
+              <td colspan="22" style="text-align:center; padding: 22px; color:var(--ink-2);">
+                <% if (_filtered) { %>
+                  Nama ODP pada daftar tidak ditemukan di data validasi berstatus 'valid'.
+                <% } else { %>
+                  Belum ada data. Masukkan daftar nama ODP lalu klik <b>Load Data</b>.
+                <% } %>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- LOADING OVERLAY PROSES GENERATE -->
+<div id="generateLoading" class="modal-backdrop" style="backdrop-filter:blur(6px);">
+  <div style="background:#FFFFFF; border-radius:20px; padding:30px 40px; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow:0 20px 60px rgba(0,0,0,0.25); min-width:300px;">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size:30px; color:var(--accent);"></i>
+    <div id="generateLoadingText" style="font-size:14px; font-weight:600; color:var(--ink); text-align:center;">Memproses dokumen...</div>
+    <div style="font-size:12px; color:var(--ink-2); text-align:center;">Mohon tunggu, proses berjalan sampai selesai.</div>
+  </div>
+</div>
+
+<script>
+  const generateLoading = document.getElementById('generateLoading');
+  const generateLoadingText = document.getElementById('generateLoadingText');
+  const btnRunGenerate = document.getElementById('btnRunGenerate');
+
+  function showGenerateLoading(text) {
+    generateLoadingText.textContent = text || 'Memproses dokumen...';
+    generateLoading.classList.add('show');
+    btnRunGenerate.disabled = true;
+    btnRunGenerate.style.opacity = '0.6';
+  }
+
+  function hideGenerateLoading() {
+    generateLoading.classList.remove('show');
+    btnRunGenerate.disabled = false;
+    btnRunGenerate.style.opacity = '';
+  }
+
+  // Ambil blob hasil generate; bila server error, lempar pesan dari respons server
+  async function fetchFile(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      let msg = 'Server error ' + res.status;
+      try {
+        const j = await res.json();
+        if (j && j.error) msg = j.error;
+      } catch (e) { /* respons bukan JSON */ }
+      throw new Error(msg);
+    }
+    return res.blob();
+  }
+
+  document.getElementById('btnLoadData').addEventListener('click', () => {
+    const text = document.getElementById('odpListInput').value;
+    const odpList = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (odpList.length === 0) {
+      showToast('Masukkan minimal satu nama ODP', 'error');
+      return;
+    }
+
+    // Load presisi lewat server: tabel & nomor urut dibentuk ulang dari daftar ini
+    window.location.href = '/valid4?odp=' + encodeURIComponent(odpList.join('\n'));
+  });
+
+  // Tunggu dashboard.js (showToast) selesai dimuat sebelum pakai showToast
+  window.addEventListener('DOMContentLoaded', () => {
+    <% if (_filtered) { %>
+      const missing = <%- JSON.stringify(_missing) %>;
+      const found = <%= rows.length %>;
+      showToast(`Memuat ${found} ODP yang sesuai daftar`, 'ok');
+      if (missing.length) {
+        showToast(`${missing.length} ODP tidak ditemukan: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''}`, 'error');
+      }
+    <% } %>
+  });
+
+  document.getElementById('btnRunGenerate').addEventListener('click', async () => {
+    const choice = document.getElementById('generateSelect').value;
+    if (!choice) {
+      showToast('Pilih jenis format generate terlebih dahulu', 'error');
+      return;
+    }
+
+    const visibleRows = Array.from(document.querySelectorAll('#valid4-table tbody tr'))
+      .filter(r => r.style.display !== 'none' && r.hasAttribute('data-id'));
+    if (visibleRows.length === 0) {
+      showToast('Tidak ada data ODP pada tabel untuk di-generate', 'error');
+      return;
+    }
+
+    const items = visibleRows.map(r => ({
+      id: r.getAttribute('data-id'),
+      nama_odp: r.getAttribute('data-odp'),
+      ea_ftm: r.querySelector('.ea-input')?.value || '',
+      oa_ftm: r.querySelector('.oa-input')?.value || '',
+      core_feeder: r.querySelector('.core-feeder-input')?.value || '1'
+    }));
+
+    const loadingTexts = {
+      pdf_foto: 'Membuat PDF + foto... mohon tunggu sampai selesai',
+      pdf_nofoto: 'Membuat PDF tanpa foto... mohon tunggu sampai selesai',
+      excel_foto: 'Membuat Excel + foto... mohon tunggu sampai selesai',
+      excel_nofoto: 'Membuat Excel tanpa foto... mohon tunggu sampai selesai',
+      excel_table: 'Membuat Excel table only... mohon tunggu sampai selesai',
+      image: 'Membuat gambar mancore... mohon tunggu sampai selesai'
+    };
+    showGenerateLoading(loadingTexts[choice] || 'Memproses dokumen... mohon tunggu sampai selesai');
+
+    try {
+      if (choice === 'pdf_foto' || choice === 'pdf_nofoto') {
+        const blob = await fetchFile('/api/valid4/generate', { data: items, skipImages: choice === 'pdf_nofoto' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `VALID4_${Date.now()}.pdf`;
+        a.click();
+        showToast('PDF berhasil diunduh', 'ok');
+      } else if (choice.startsWith('excel')) {
+        const tableOnly = choice === 'excel_table';
+        const skipImages = choice === 'excel_nofoto' || tableOnly;
+        const blob = await fetchFile('/api/valid4/generate-excel', { data: items, skipImages, tableOnly });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `VALID4_${Date.now()}.xlsx`;
+        a.click();
+        showToast('Excel berhasil diunduh', 'ok');
+      } else if (choice === 'image') {
+        const blob = await fetchFile('/api/valid4/generate-image', { data: items });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = items.length === 1 ? `mancore_${items[0].nama_odp}.jpg` : `MANCORE_TABLES_${Date.now()}.zip`;
+        a.click();
+        showToast('Gambar berhasil diunduh', 'ok');
+      }
+    } catch (err) {
+      showToast('Gagal generate: ' + err.message, 'error');
+    } finally {
+      hideGenerateLoading();
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

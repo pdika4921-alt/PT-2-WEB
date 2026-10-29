@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'PT 2 KONS Monitoring' %></title>
+  <!-- Font Awesome 6.5.1 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Stylesheet Twisty Design System -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- SIDEBAR KIRI: latar merah (sidebar.jpg) + logo Telkom Akses -->
+    <aside class="sidebar">
+      <a href="/dashboard" class="sidebar-brand" aria-label="Beranda Telkom Akses">
+        <img src="/logo ta.png" alt="Telkom Akses" class="sidebar-logo">
+      </a>
+
+      <nav aria-label="Navigasi Utama">
+        <ul class="sidebar-links">
+          <li><a href="/dashboard" class="<%= (typeof page !== 'undefined' && page === 'dashboard') ? 'active' : '' %>"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a></li>
+          <li><a href="/database" class="<%= (typeof page !== 'undefined' && page === 'database') ? 'active' : '' %>"><i class="fa-solid fa-database"></i><span>Database PT2</span></a></li>
+          <li><a href="/dbpt2" class="<%= (typeof page !== 'undefined' && page === 'dbpt2') ? 'active' : '' %>"><i class="fa-solid fa-server"></i><span>DB PT 2 Lengkap</span></a></li>
+          <li><a href="/valid4" class="<%= (typeof page !== 'undefined' && page === 'valid4') ? 'active' : '' %>"><i class="fa-solid fa-clipboard-check"></i><span>VALID 4</span></a></li>
+          <li><a href="/rekon" class="<%= (typeof page !== 'undefined' && page === 'rekon') ? 'active' : '' %>"><i class="fa-solid fa-scale-balanced"></i><span>Rekon PT2</span></a></li>
+          <li><a href="/rekon-freelance" class="<%= (typeof page !== 'undefined' && page === 'rekon-freelance') ? 'active' : '' %>"><i class="fa-solid fa-user-check"></i><span>Rekon Freelance</span></a></li>
+          <li><a href="/pengaturan" class="<%= (typeof page !== 'undefined' && page === 'pengaturan') ? 'active' : '' %>"><i class="fa-solid fa-gear"></i><span>Pengaturan</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <i class="fa-solid fa-tower-broadcast"></i>
+        <div>
+          <b>PT 2 KONS</b>
+          <span>Monitoring App</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- AREA KONTEN UTAMA -->
+    <div class="shell">
+    <header class="topnav">
+      <!-- KIRI: Judul singkat -->
+      <a href="/dashboard" class="topnav-brand" aria-label="Beranda PT 2 KONS">
+        <div class="brand-icon">
+          <i class="fa-solid fa-tower-broadcast"></i>
+        </div>
+        <span class="brand-text">PT 2 KONS</span>
+      </a>
+
+      <!-- KANAN: Pencarian, Shortcut Sync, Notifikasi, User Avatar -->
+      <div class="topnav-right">
+        <div class="search-pill-form">
+          <input 
+            type="text" 
+            id="global-search-input" 
+            class="search-pill" 
+            placeholder="Cari ODP, mitra, HSA…" 
+            value="<%= (typeof query !== 'undefined' && query && query.q) ? query.q : '' %>"
+            aria-label="Pencarian global"
+          >
+          <i class="fa-solid fa-magnifying-glass search-pill-icon"></i>
+        </div>
+
+        <button type="button" class="btn-icon-circle" onclick="triggerSync('all')" title="Sinkronisasi Data" aria-label="Sync Data">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+
+        <button type="button" class="btn-icon-circle" title="Notifikasi" aria-label="Notifikasi">
+          <i class="fa-regular fa-bell"></i>
+        </button>
+
+        <div class="user-profile">
+          <div class="avatar-circle" title="<%= (typeof user !== 'undefined' && user && user.nama) ? user.nama : 'Admin' %>" aria-label="Menu Pengguna">
+            <%= (typeof user !== 'undefined' && user && user.nama) ? user.nama.substring(0, 2).toUpperCase() : 'AD' %>
+          </div>
+          <div class="user-dropdown">
+            <div style="padding: 6px 10px; font-size: 11px; color: var(--ink-2); border-bottom: 1px solid var(--line); margin-bottom: 4px;">
+              <b><%= (typeof user !== 'undefined' && user && user.nama) ? user.nama : 'Administrator' %></b>
+            </div>
+            <a href="/pengaturan"><i class="fa-solid fa-gear"></i> Pengaturan</a>
+            <a href="/api/auth/logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar</a>
+          </div>
+        </div>
+      </div>
+    </header>

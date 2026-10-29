@@ -1,0 +1,156 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header & KPI -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">Database PT2</h1>
+      <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Daftar seluruh pekerjaan validasi fiber optic OSP-HEM.</p>
+    </div>
+    <a href="/database/export" class="btn-pill" style="background:#FFFFFF;">
+      <i class="fa-solid fa-download"></i> Export CSV
+    </a>
+  </div>
+
+  <!-- 3 Kartu KPI -->
+  <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr);">
+    <!-- KPI 1: Total Data -->
+    <div class="kpi-card">
+      <div class="kpi-label">TOTAL DATA VALIDASI</div>
+      <div class="kpi-num"><%= total %></div>
+      <div class="tick-bars">
+        <% for (let i = 0; i < 28; i++) { %>
+          <div class="tick-bar filled-navy" style="height: <%= 35 + (i * 17) % 65 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 2: Ada Eviden -->
+    <div class="kpi-card">
+      <div class="kpi-label">ADA EVIDEN FOTO</div>
+      <% const withEvidenPct = total > 0 ? Math.round((withEviden / total) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--ok);"><%= withEviden %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= withEvidenPct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledWith = Math.round((withEvidenPct * 28) / 100);
+          for (let i = 0; i < 28; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledWith ? 'filled-orange' : '' %>" style="height: <%= 40 + (i * 23) % 60 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 3: Tanpa Eviden -->
+    <div class="kpi-card">
+      <div class="kpi-label">TANPA EVIDEN</div>
+      <% const withoutEvidenPct = total > 0 ? Math.round((withoutEviden / total) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--bad);"><%= withoutEviden %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= withoutEvidenPct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledWithout = Math.round((withoutEvidenPct * 28) / 100);
+          for (let i = 0; i < 28; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledWithout ? 'filled-navy' : '' %>" style="height: <%= 30 + (i * 19) % 70 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu Tabel Data -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box"><i class="fa-solid fa-database"></i></div>
+        <h2 class="card-title" style="font-size:22px;">Data Validasi Lapangan</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);">
+        Filter menghasilkan <b><%= filteredCount %></b> data
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="/database" class="filter-bar">
+      <input type="date" name="tgl_awal" class="filter-input" value="<%= query.tgl_awal %>" title="Tanggal Awal">
+      <span style="color:var(--ink-3); font-size:12px;">s/d</span>
+      <input type="date" name="tgl_akhir" class="filter-input" value="<%= query.tgl_akhir %>" title="Tanggal Akhir">
+
+      <select name="sto" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua STO</option>
+        <% stoList.forEach(s => { %>
+          <option value="<%= s %>" <%= query.sto === s ? 'selected' : '' %>><%= s %></option>
+        <% }); %>
+      </select>
+
+      <input type="text" name="q" class="filter-input" style="min-width:240px;" placeholder="Cari ODP, teknisi, valins…" value="<%= query.q %>">
+
+      <button type="submit" class="btn-pill btn-primary" style="height: 30px; padding:0 18px;">
+        <i class="fa-solid fa-filter"></i> Filter
+      </button>
+
+      <% if (query.tgl_awal || query.tgl_akhir || query.sto || query.q) { %>
+        <a href="/database" class="btn-pill" style="height: 30px; padding:0 14px;">Reset</a>
+      <% } %>
+    </form>
+
+    <!-- Tabel 10 Kolom -->
+    <div class="table-wrap">
+      <table class="data-table" id="main-data-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">No</th>
+            <th>Tanggal</th>
+            <th>Teknisi</th>
+            <th>STO</th>
+            <th>HSA Area</th>
+            <th>Nama ODP</th>
+            <th>IP OLT</th>
+            <th>Valins</th>
+            <th style="text-align:center;">Eviden</th>
+            <th style="width:60px; text-align:center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach((r, idx) => { 
+            const hasEviden = (r.url_foto_eviden && r.url_foto_eviden.trim() !== '') || (r.eviden_odp_terbuka && r.eviden_odp_terbuka.trim() !== '');
+          %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td><%= r.tanggal || '-' %></td>
+              <td><b><%= r.teknisi || '-' %></b></td>
+              <td><span class="chip-tag"><%= r.sto || '-' %></span></td>
+              <td><%= r.hsa_area || '-' %></td>
+              <td class="mono font-semibold"><b><%= r.nama_odp %></b></td>
+              <td class="mono"><%= r.ip_olt || '-' %></td>
+              <td class="mono"><%= r.id_valins || '-' %></td>
+              <td style="text-align:center;">
+                <% if (hasEviden) { %>
+                  <span class="pill pill-dark">Ada</span>
+                <% } else { %>
+                  <span class="pill pill-outline">Kosong</span>
+                <% } %>
+              </td>
+              <td style="text-align:center;">
+                <a href="/database/detail/<%= r.id %>" class="btn-circle" title="Lihat Detail Validasi" aria-label="Lihat Detail">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% if (rows.length === 0) { %>
+            <tr class="no-paginate">
+              <td colspan="10" style="text-align:center; padding: 22px; color:var(--ink-2);">
+                Tidak ada data validasi yang ditemukan.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<%- include('partials/footer') %>

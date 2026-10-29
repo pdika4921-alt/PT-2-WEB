@@ -1,0 +1,173 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header & Export -->
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">DB PT 2 Lengkap</h1>
+      <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Data master proyek fiber optic PT2 beserta status integrasi golive.</p>
+    </div>
+    <a href="/dbpt2/export" class="btn-pill" style="background:#FFFFFF;">
+      <i class="fa-solid fa-download"></i> Export CSV
+    </a>
+  </div>
+
+  <!-- 4 Kartu KPI -->
+  <div class="kpi-row" style="grid-template-columns: repeat(4, 1fr);">
+    <!-- KPI 1: Total Data -->
+    <div class="kpi-card">
+      <div class="kpi-label">TOTAL DATA MASTER PT2</div>
+      <div class="kpi-num"><%= total %></div>
+      <div class="tick-bars">
+        <% for (let i = 0; i < 20; i++) { %>
+          <div class="tick-bar filled-navy" style="height: <%= 40 + (i * 17) % 60 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 2: Area Teratas -->
+    <div class="kpi-card">
+      <div class="kpi-label">DISTRIBUSI AREA</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; min-height:48px; align-items:center;">
+        <% areas.slice(0, 3).forEach(a => { %>
+          <span class="chip-tag" style="background:#F3F4F6;"><b><%= a.area %></b> (<%= a.jumlah %>)</span>
+        <% }); %>
+      </div>
+      <div class="tick-bars">
+        <% for (let i = 0; i < 20; i++) { %>
+          <div class="tick-bar filled-blue" style="height: <%= 35 + (i * 23) % 65 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 3: GOLIVE -->
+    <div class="kpi-card">
+      <div class="kpi-label">SUDAH GOLIVE</div>
+      <% const golivePct = total > 0 ? Math.round((golive / total) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--ok);"><%= golive %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= golivePct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledGo = Math.round((golivePct * 20) / 100);
+          for (let i = 0; i < 20; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledGo ? 'filled-orange' : '' %>" style="height: <%= 45 + (i * 13) % 55 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- KPI 4: Belum GOLIVE -->
+    <div class="kpi-card">
+      <div class="kpi-label">BELUM GOLIVE</div>
+      <% const belumPct = total > 0 ? Math.round((belumGolive / total) * 100) : 0; %>
+      <div class="kpi-num" style="color:var(--warn);"><%= belumGolive %> <span style="font-size:16px; font-weight:600; color:var(--ink-2);">(<%= belumPct %>%)</span></div>
+      <div class="tick-bars">
+        <% 
+          const filledBelum = Math.round((belumPct * 20) / 100);
+          for (let i = 0; i < 20; i++) { 
+        %>
+          <div class="tick-bar <%= i < filledBelum ? 'filled-navy' : '' %>" style="height: <%= 30 + (i * 19) % 70 %>%;"></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu Tabel Data -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box"><i class="fa-solid fa-list-check"></i></div>
+        <h2 class="card-title" style="font-size:22px;">Data Master ODP PT2</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);">
+        Total baris: <b><%= rows.length %></b>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="/dbpt2" class="filter-bar">
+      <select name="area" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua Area</option>
+        <% areaList.forEach(a => { %>
+          <option value="<%= a %>" <%= query.area === a ? 'selected' : '' %>><%= a %></option>
+        <% }); %>
+      </select>
+
+      <select name="golive" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua Status</option>
+        <option value="1" <%= query.golive === '1' ? 'selected' : '' %>>Sudah Golive</option>
+        <option value="0" <%= query.golive === '0' ? 'selected' : '' %>>Belum Golive</option>
+      </select>
+
+      <input type="text" name="q" class="filter-input" style="min-width:240px;" placeholder="Cari ODP, LOP, mitra…" value="<%= query.q %>">
+
+      <button type="submit" class="btn-pill btn-primary" style="height: 30px; padding:0 18px;">
+        <i class="fa-solid fa-filter"></i> Filter
+      </button>
+
+      <% if (query.area || query.golive || query.q) { %>
+        <a href="/dbpt2" class="btn-pill" style="height: 30px; padding:0 14px;">Reset</a>
+      <% } %>
+    </form>
+
+    <!-- Tabel 10 Kolom -->
+    <div class="table-wrap">
+      <table class="data-table" id="main-data-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">No</th>
+            <th>Area</th>
+            <th>STO</th>
+            <th>ODP Name</th>
+            <th>Tematik</th>
+            <th>Mitra</th>
+            <th>Progress Update</th>
+            <th>Tgl Golive</th>
+            <th style="text-align:center;">Status</th>
+            <th style="width:60px; text-align:center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach((r, idx) => { 
+            const isGolive = r.progress_update && r.progress_update.includes('GOLIVE');
+          %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td><span class="chip-tag"><%= r.area || '-' %></span></td>
+              <td><b><%= r.sto || '-' %></b></td>
+              <td class="mono font-semibold"><b><%= r.odp_name %></b></td>
+              <td><%= r.tematik_project || '-' %></td>
+              <td><%= r.group_mitra || '-' %></td>
+              <td><%= r.progress_update || '-' %></td>
+              <td><%= r.tgl_golive || '-' %></td>
+              <td style="text-align:center;">
+                <% if (isGolive) { %>
+                  <span class="pill pill-dark">GOLIVE</span>
+                <% } else { %>
+                  <span class="pill pill-outline">PROGRESS</span>
+                <% } %>
+              </td>
+              <td style="text-align:center;">
+                <a href="/dbpt2/detail/<%= r.id %>" class="btn-circle" title="Lihat Detail Master" aria-label="Lihat Detail">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% if (rows.length === 0) { %>
+            <tr class="no-paginate">
+              <td colspan="10" style="text-align:center; padding: 22px; color:var(--ink-2);">
+                Tidak ada data master PT2 yang ditemukan.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<%- include('partials/footer') %>

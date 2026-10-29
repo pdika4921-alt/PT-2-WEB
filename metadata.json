@@ -1,0 +1,6 @@
+{
+  "name": "PT 2 KONS Monitoring",
+  "description": "Aplikasi monitoring pekerjaan fiber optic OSP-HEM untuk PT 2 KONS dengan desain Twisty",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

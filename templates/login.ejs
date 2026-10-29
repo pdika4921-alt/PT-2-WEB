@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — PT 2 KONS MONITORING</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: linear-gradient(160deg, rgba(226, 26, 37, 0.9) 0%, rgba(142, 12, 22, 0.95) 100%), url('/sidebar.jpg') center center / cover no-repeat fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+    }
+    .login-logo-plate {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 10px 16px;
+      display: inline-block;
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(60, 0, 5, 0.3);
+    }
+    .login-logo {
+      width: 200px;
+      height: auto;
+      display: block;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border-radius: 28px;
+      padding: 22px 32px;
+      box-shadow: 0 20px 60px rgba(40, 48, 80, 0.22);
+      text-align: center;
+    }
+    .login-brand-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF6B4A, #E8472B);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 14px rgba(232, 71, 43, 0.35);
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .login-desc {
+      font-size: 13px;
+      color: var(--ink-2);
+      margin-bottom: 26px;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: left;
+    }
+    .login-input {
+      width: 100%;
+      height: 44px;
+      background: #F3F4F6;
+      border: 1px solid transparent;
+      border-radius: var(--radius-pill);
+      padding: 0 18px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      outline: none;
+      transition: all 0.15s;
+    }
+    .login-input:focus {
+      background: #FFFFFF;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(123, 167, 214, 0.25);
+    }
+    .login-btn {
+      width: 100%;
+      height: 46px;
+      background: var(--navy);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .login-btn:hover {
+      background: #111622;
+    }
+    .login-btn:active {
+      transform: scale(0.98);
+    }
+    .login-error {
+      background: #FDF2F2;
+      border: 1px solid #F8B4B4;
+      color: #9B1C1C;
+      font-size: 12px;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .debug-info {
+      font-size: 10.5px;
+      color: var(--ink-3);
+      margin-top: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo-plate">
+      <img src="/logo ta.png" alt="Telkom Akses" class="login-logo">
+    </div>
+    <h1 class="login-title">PT 2 KONS MONITORING</h1>
+    <p class="login-desc">Silakan login untuk melanjutkan</p>
+
+    <div id="error-box" class="login-error"></div>
+
+    <form class="login-form" id="loginForm">
+      <div>
+        <label for="username" style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--ink-3); margin-bottom:4px; margin-left:8px;">Username</label>
+        <input type="text" id="username" class="login-input" placeholder="Masukkan username" required autocomplete="username" value="admin">
+      </div>
+      <div>
+        <label for="password" style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--ink-3); margin-bottom:4px; margin-left:8px;">Password</label>
+        <input type="password" id="password" class="login-input" placeholder="Masukkan password" required autocomplete="current-password" value="admin123">
+      </div>
+
+      <button type="submit" id="submitBtn" class="login-btn">
+        <span>Masuk</span> <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <div class="debug-info">Default admin: admin / admin123</div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorBox = document.getElementById('error-box');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Memproses…</span> <i class="fa-solid fa-spinner fa-spin"></i>';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          // Cookie manual token=<jwt>; max-age=604800; path=/
+          document.cookie = `token=${data.token}; max-age=604800; path=/`;
+          window.location.href = '/dashboard';
+        } else {
+          errorBox.textContent = data.error || 'Login gagal, periksa kembali kredensial Anda.';
+          errorBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Masuk</span> <i class="fa-solid fa-arrow-right"></i>';
+        }
+      } catch (err) {
+        errorBox.textContent = 'Terjadi kesalahan koneksi server: ' + err.message;
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Masuk</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    });
+  </script>
+</body>
+</html>

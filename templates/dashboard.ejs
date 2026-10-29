@@ -1,0 +1,309 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- BARIS 1: Progress Validasi (8 kol) & Golive Terbaru (4 kol) -->
+  <div style="display: grid; grid-template-columns: 1.8fr 1fr; gap: 14px;" class="dashboard-grid-12">
+    
+    <!-- KIRI: Progress Validasi Card -->
+    <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-icon-box">
+              <i class="fa-solid fa-chart-simple"></i>
+            </div>
+            <h2 class="card-title">Progress validasi</h2>
+          </div>
+          <select class="select-pill" aria-label="Pilih Periode">
+            <option>Minggu ▾</option>
+            <option>Bulan ▾</option>
+          </select>
+        </div>
+        <p class="card-sub">Pantau perubahan jumlah ODP Valid 4 dan akses data detail per mitra.</p>
+
+        <!-- DOT CHART -->
+        <div class="dot-chart-container">
+          <% 
+            const maxVal = Math.max(...dotChart.days.map(d => d.val), 1);
+            dotChart.days.forEach((day, index) => { 
+              const pct = Math.max(12, Math.min(94, Math.round((day.val / maxVal) * 82) + 12));
+              const isSelected = index === dotChart.selectedIndex;
+          %>
+            <div class="dot-col <%= isSelected ? 'selected' : '' %>" data-index="<%= index %>">
+              <div class="dot-tooltip"><%= day.val %> ODP</div>
+              <div class="dot-col-track">
+                <div class="dot-point" style="bottom: <%= pct %>%;"></div>
+              </div>
+              <div class="dot-label"><%= day.label %></div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Trend Bottom -->
+      <div style="display:flex; align-items:baseline; gap:12px; margin-top:10px;">
+        <span style="font-size:24px; font-weight:700; color:var(--ink); letter-spacing:-1px;"><%= dotChart.trendPct %></span>
+        <span style="font-size:13px; color:var(--ink-2);">Valid 4 periode ini dibanding periode lalu</span>
+      </div>
+    </div>
+
+    <!-- KANAN: Golive Terbaru -->
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title" style="font-size:22px;">Golive terbaru</h2>
+        <a href="/dbpt2?golive=1" style="font-size:12px; color:var(--ink); font-weight:600; text-decoration:underline;">Lihat semua</a>
+      </div>
+
+      <div class="accordion-list">
+        <% 
+          const iconColors = [
+            'linear-gradient(135deg, #E8472B, #C2351D)',
+            'linear-gradient(135deg, #7BA7D6, #5986B7)',
+            'linear-gradient(135deg, #1B2233, #333C4F)'
+          ];
+          goliveList.slice(0, 4).forEach((item, idx) => { 
+            const isFirst = idx === 0;
+            const bgGradient = iconColors[idx % iconColors.length];
+        %>
+          <div class="accordion-row <%= isFirst ? 'open' : '' %>">
+            <div class="accordion-header">
+              <div class="accordion-header-left">
+                <div class="acc-icon" style="background: <%= bgGradient %>;">
+                  <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <div>
+                  <div class="acc-title"><%= item.odp_name %></div>
+                  <div class="acc-sub"><%= item.datel_hsa || item.area || 'OSP' %> · <%= item.sto %></div>
+                </div>
+              </div>
+              <span class="pill <%= item.progress_update && item.progress_update.includes('GOLIVE') ? 'pill-dark' : 'pill-outline' %>">
+                <%= item.progress_update && item.progress_update.includes('GOLIVE') ? '1' : '0' %>
+              </span>
+            </div>
+
+            <div class="accordion-body">
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                <span class="chip-tag"><%= item.area || 'Area 2' %></span>
+                <span class="chip-tag"><%= item.group_mitra || 'Mitra' %></span>
+              </div>
+              <div style="font-size:12px; color:var(--ink-2); line-height:1.4;">
+                Golive <%= item.tgl_golive || 'Februari 2026' %> · <%= item.timeAgo %>
+              </div>
+              <div style="margin-top:6px; font-size:11px; color:var(--ink-3);" class="mono">
+                <%= item.nama_lop %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+
+        <% if (goliveList.length === 0) { %>
+          <div style="font-size:12px; color:var(--ink-2); text-align:center; padding:20px;">Belum ada data Golive</div>
+        <% } %>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-2);">
+        <span>Grand Total Golive</span>
+        <span style="font-weight:700; color:var(--ink);"><%= goliveList.length %> ODP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARIS 2: Mitra Teratas (1fr) | Sinkron Data (0.8fr) | Progres Pekerjaan (1.3fr) -->
+  <div style="display: grid; grid-template-columns: 1fr 0.85fr 1.35fr; gap: 14px;" class="dashboard-row-2">
+    
+    <!-- Kolom 1: Mitra Teratas -->
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title" style="font-size:20px;">Mitra teratas</h2>
+        <a href="/database" style="font-size:12px; color:var(--ink); font-weight:600; text-decoration:underline;">Lihat semua</a>
+      </div>
+
+      <div class="person-list">
+        <% 
+          const badgeVariants = ['pill-accent', 'pill-blue', 'pill-dark'];
+          rekapMitra.slice(0, 3).forEach((m, idx) => { 
+            const initials = m.mitra.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'MT';
+            const bStyle = badgeVariants[idx % badgeVariants.length];
+        %>
+          <div class="person-row">
+            <div class="person-left">
+              <div class="person-avatar"><%= initials %></div>
+              <div>
+                <div class="person-name">
+                  <%= m.mitra %>
+                  <span class="pill <%= bStyle %>" style="font-size:10px; padding:2px 7px;"><%= m.valid_count %></span>
+                </div>
+                <div class="person-sub"><%= m.valid_count %> valid · <%= m.pending_count %> pending</div>
+              </div>
+            </div>
+            <a href="/dashboard?q=<%= encodeURIComponent(m.mitra) %>" class="btn-circle" title="Filter ke mitra <%= m.mitra %>" aria-label="Filter ke mitra">
+              <i class="fa-solid fa-plus"></i>
+            </a>
+          </div>
+        <% }); %>
+
+        <% if (rekapMitra.length === 0) { %>
+          <div style="font-size:12px; color:var(--ink-2); text-align:center; padding:16px;">Belum ada data mitra</div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Kolom 2: Sinkron Data Terbaru -->
+    <div class="promo-card">
+      <div>
+        <h3 class="promo-title">Sinkron data terbaru</h3>
+        <p class="promo-desc">Tarik data terbaru dari Google Sheet ke database lokal.</p>
+      </div>
+
+      <button type="button" class="btn-pill" onclick="triggerSync('all')" style="justify-content:space-between; width:100%; background:#FFFFFF;">
+        <span>Sync sekarang</span>
+        <i class="fa-solid fa-chevron-right" style="font-size:11px;"></i>
+      </button>
+    </div>
+
+    <!-- Kolom 3: Progres Pekerjaan -->
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title" style="font-size:20px;">Progres pekerjaan</h2>
+        <span class="select-pill" style="font-size:11.5px; border-color:var(--line);">
+          <%= new Date().toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' }) %>
+        </span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:14px; margin-bottom:12px;">
+        <!-- Total Berkas -->
+        <div>
+          <div class="kpi-label">Total berkas</div>
+          <div class="kpi-num" style="font-size:32px;"><%= summary.total_pekerjaan %></div>
+          <!-- Tick bars abu -->
+          <div class="tick-bars" style="height:26px;">
+            <% for (let i = 0; i < 18; i++) { %>
+              <div class="tick-bar" style="height: <%= 30 + (i * 19) % 70 %>%;"></div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Done Valid 4 -->
+        <div>
+          <div class="kpi-label">Valid 4</div>
+          <div class="kpi-num" style="font-size:32px; color:var(--accent);"><%= summary.total_valid %></div>
+          <!-- Tick bars oranye -->
+          <div class="tick-bars" style="height:26px;">
+            <% 
+              const validBars = Math.round((progressPct * 18) / 100);
+              for (let i = 0; i < 18; i++) { 
+                const isFilled = i < validBars;
+            %>
+              <div class="tick-bar <%= isFilled ? 'filled-orange' : '' %>" style="height: <%= 40 + (i * 23) % 60 %>%;"></div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Golive -->
+        <div>
+          <div class="kpi-label">Golive PT2</div>
+          <div class="kpi-num" style="font-size:32px; color:var(--navy);"><%= totalDatabasePt2 %></div>
+          <!-- Tick bars navy -->
+          <div class="tick-bars" style="height:26px;">
+            <% for (let i = 0; i < 18; i++) { %>
+              <div class="tick-bar filled-navy" style="height: <%= 35 + (i * 17) % 65 %>%;"></div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARIS 3: Tabel TABOO Penuh -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box">
+          <i class="fa-solid fa-table-list"></i>
+        </div>
+        <h2 class="card-title" style="font-size:22px;">Monitoring Pekerjaan (TABOO)</h2>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2);">
+        Menampilkan <b><%= tableRows.length %></b> baris
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="/dashboard" class="filter-bar">
+      <input type="date" name="tgl_awal" class="filter-input" value="<%= query.tgl_awal %>" title="Tanggal Awal">
+      <span style="color:var(--ink-3); font-size:12px;">s/d</span>
+      <input type="date" name="tgl_akhir" class="filter-input" value="<%= query.tgl_akhir %>" title="Tanggal Akhir">
+
+      <input type="text" name="q" class="filter-input" style="min-width:260px;" placeholder="Cari ODP, mitra, HSA…" value="<%= query.q %>">
+
+      <button type="submit" class="btn-pill btn-primary" style="height: 30px; padding:0 18px;">
+        <i class="fa-solid fa-filter"></i> Filter
+      </button>
+
+      <% if (query.tgl_awal || query.tgl_akhir || query.q) { %>
+        <a href="/dashboard" class="btn-pill" style="height: 30px; padding:0 14px;">Reset</a>
+      <% } %>
+    </form>
+
+    <!-- Tabel Data TABOO -->
+    <div class="table-wrap">
+      <table class="data-table" id="main-data-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">No</th>
+            <th>Nama Mitra / Mandor</th>
+            <th>HSA Area</th>
+            <th>Nama ODP</th>
+            <th style="text-align:center;">Valid 4</th>
+            <th style="width:60px; text-align:center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% tableRows.forEach((row) => { %>
+            <tr class="<%= row.isFirstInGroup ? 'group-header' : '' %>">
+              <td><%= row.rowNumber %></td>
+              <td>
+                <% if (row.displayMitra) { %>
+                  <b><%= row.displayMitra %></b>
+                <% } %>
+              </td>
+              <td><%= row.hsa_area || '-' %></td>
+              <td class="mono font-semibold"><b><%= row.nama_odp %></b></td>
+              <td style="text-align:center;">
+                <% if (row.status_validasi === 'valid') { %>
+                  <span class="pill pill-dark">1</span>
+                <% } else if (row.status_validasi === 'pending') { %>
+                  <span class="pill pill-outline">0</span>
+                <% } else if (row.status_validasi === 'invalid') { %>
+                  <span class="pill pill-accent">Invalid</span>
+                <% } else if (row.status_validasi === 'revisi') { %>
+                  <span class="pill pill-blue">Revisi</span>
+                <% } else { %>
+                  <span class="pill pill-outline"><%= row.status_validasi %></span>
+                <% } %>
+              </td>
+              <td style="text-align:center;">
+                <a href="/dashboard/detail/<%= row.id %>" class="btn-circle" title="Lihat Detail Validasi" aria-label="Lihat Detail">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% if (tableRows.length === 0) { %>
+            <tr class="no-paginate">
+              <td colspan="6" style="text-align:center; padding: 22px; color:var(--ink-2);">
+                Tidak ada data pekerjaan yang sesuai dengan filter.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<%- include('partials/footer') %>

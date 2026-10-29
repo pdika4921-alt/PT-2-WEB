@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Validasi — <%= v.nama_odp %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="shell">
+    
+    <!-- Topbar Kecil Tanpa Topnav Penuh -->
+    <header style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--line);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="brand-icon">
+          <i class="fa-solid fa-tower-broadcast"></i>
+        </div>
+        <span class="brand-text">PT 2 KONS MONITORING</span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <a href="/dashboard" class="btn-pill" style="background:#FFFFFF;">
+          <i class="fa-solid fa-arrow-left"></i> Dashboard
+        </a>
+      </div>
+    </header>
+
+    <main style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
+
+      <!-- Header ODP Card -->
+      <div class="card" style="padding:20px 28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+          <div>
+            <h1 style="font-size: 28px; font-weight: 500; letter-spacing: -0.5px;" class="mono">
+              <%= v.nama_odp %>
+            </h1>
+            <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">
+              STO <%= v.sto %> · <%= v.hsa_area || 'Area OSP' %> · ID Valins: <span class="mono"><%= v.id_valins || '-' %></span>
+            </p>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <select id="statusSelect" class="select-pill" style="font-weight:700; height: 30px; border-color:var(--navy);">
+              <option value="pending" <%= v.status_validasi === 'pending' ? 'selected' : '' %>>STATUS: PENDING</option>
+              <option value="valid" <%= v.status_validasi === 'valid' ? 'selected' : '' %>>STATUS: VALID</option>
+              <option value="invalid" <%= v.status_validasi === 'invalid' ? 'selected' : '' %>>STATUS: INVALID</option>
+              <option value="revisi" <%= v.status_validasi === 'revisi' ? 'selected' : '' %>>STATUS: REVISI</option>
+            </select>
+
+            <button type="button" class="btn-pill btn-primary" id="btnUpdateStatus">
+              <i class="fa-solid fa-check"></i> Simpan Status
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid 2 Kolom: Informasi Umum (17 baris) & Textarea Data + Eviden Kurang -->
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px;" class="dashboard-grid-12">
+        
+        <!-- KIRI: Card Informasi Umum (17 baris) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon-box"><i class="fa-solid fa-circle-info"></i></div>
+              <h2 class="card-title" style="font-size:20px;">Informasi Umum Pekerjaan</h2>
+            </div>
+            <div>
+              <% if (v.bast_generated || (v.bast_url && v.bast_url !== '')) { %>
+                <a href="<%= v.bast_url || ('/api/validasi/' + v.id + '/bast-download') %>" target="_blank" class="btn-pill" style="font-size:11.5px; padding:6px 14px;">
+                  <i class="fa-solid fa-file-pdf"></i> Lihat BAST
+                </a>
+              <% } else { %>
+                <button type="button" class="btn-pill btn-primary" id="btnGenerateBast" style="font-size:11.5px; padding:6px 14px;">
+                  <i class="fa-solid fa-file-signature"></i> Generate BAST
+                </button>
+              <% } %>
+            </div>
+          </div>
+
+          <% 
+            const infoRows = [
+              { label: 'Tanggal Pekerjaan', val: v.tanggal },
+              { label: 'Nama Teknisi', val: v.teknisi },
+              { label: 'Witel / STO', val: v.sto },
+              { label: 'HSA Area', val: v.hsa_area },
+              { label: 'Nama ODP', val: v.nama_odp, mono: true },
+              { label: 'ID Valins', val: v.id_valins, mono: true },
+              { label: 'IP OLT', val: v.ip_olt, mono: true },
+              { label: 'Slot / Port OLT', val: `${v.slot_olt || '-'}/${v.port_olt || '-'}` },
+              { label: 'Tipe Splitter', val: v.tipe_splitter },
+              { label: 'Kapasitas Kabel', val: v.kapasitas_kabel },
+              { label: 'Distribusi / Core', val: `${v.distribusi || '-'}/${v.core_distribusi || '-'}` },
+              { label: 'Koordinat', val: `${v.latitude || '-'}, ${v.longitude || '-'}` },
+              { label: 'District', val: v.district },
+              { label: 'Mitra Pelaksana', val: v.mitra },
+              { label: 'Klasifikasi Eksekutor', val: v.klasifikasi_eksekutor },
+              { label: 'Klasifikasi / No. Order', val: `${v.klasifikasi_order || '-'} / ${v.no_order || '-'}` },
+              { label: 'Keterangan Tambahan', val: v.keterangan }
+            ];
+          %>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <% infoRows.forEach(r => { %>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:6px; font-size:12.5px;">
+                <span style="color:var(--ink-2);"><%= r.label %></span>
+                <span style="font-weight:600; color:var(--ink); text-align:right;" class="<%= r.mono ? 'mono' : '' %>"><%= r.val || '-' %></span>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- KANAN: Textarea Data & Eviden Kurang -->
+        <div style="display:flex; flex-direction:column; gap: 14px;">
+          
+          <!-- Card Textarea Data -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head-left">
+                <div class="card-icon-box"><i class="fa-solid fa-code"></i></div>
+                <h3 class="card-title" style="font-size:18px;">Textarea Data Mentah</h3>
+              </div>
+            </div>
+            <pre style="background:#F3F4F6; padding:14px; border-radius:14px; font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--ink); white-space:pre-wrap; max-height:160px; overflow-y:auto;"><%= v.textarea_data || 'Tidak ada teks data mentah' %></pre>
+          </div>
+
+          <!-- Card Eviden Kurang -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head-left">
+                <div class="card-icon-box" style="background:#FDF2F2; color:var(--bad);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h3 class="card-title" style="font-size:18px;">Eviden Kurang</h3>
+              </div>
+              <span class="pill pill-accent"><%= evidenKurang.length %></span>
+            </div>
+
+            <% if (evidenKurang.length > 0) { %>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <% evidenKurang.forEach(k => { %>
+                  <div style="background:#FDF2F2; border-left:3px solid var(--bad); padding:10px 14px; border-radius:8px;">
+                    <div style="font-size:12.5px; font-weight:700; color:#9B1C1C;"><%= k.jenis_eviden %></div>
+                    <div style="font-size:11.5px; color:#771D1D; margin-top:2px;"><%= k.catatan %></div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div style="font-size:12px; color:var(--ok); font-weight:600; padding:10px 0;">
+                <i class="fa-solid fa-circle-check"></i> Tidak ada catatan eviden kurang.
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Card Management Core FO Upload -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head-left">
+                <div class="card-icon-box"><i class="fa-solid fa-diagram-project"></i></div>
+                <h3 class="card-title" style="font-size:18px;">Management Core FO</h3>
+              </div>
+            </div>
+
+            <div style="text-align:center;">
+              <% if (v.mancore_image) { %>
+                <img src="<%= v.mancore_image %>" style="width:100%; max-height:160px; object-fit:contain; border-radius:12px; border:1px solid #ddd; margin-bottom:10px;" onclick="openImageModal('<%= v.mancore_image %>', 'Mancore Image')" alt="Mancore">
+              <% } %>
+              
+              <label class="btn-pill" style="cursor:pointer; display:inline-flex;">
+                <i class="fa-solid fa-upload"></i> Unggah Gambar Mancore
+                <input type="file" id="mancoreFileInput" accept="image/*" style="display:none;">
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Card Foto Eviden (Grid via /api/proxy-image) -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-icon-box"><i class="fa-solid fa-camera"></i></div>
+            <h2 class="card-title" style="font-size:20px;">Galeri Foto Eviden Terverifikasi</h2>
+          </div>
+          <span class="chip-tag"><%= evidenList.length %> Foto</span>
+        </div>
+
+        <% if (evidenList.length > 0) { %>
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
+            <% evidenList.forEach(item => { 
+              const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(item.url)}`;
+            %>
+              <div style="background:#F6F8FA; border-radius:16px; overflow:hidden; border:1px solid var(--line); display:flex; flex-direction:column;">
+                <div style="padding:8px 12px; font-size:11.5px; font-weight:700; color:var(--ink); background:#EAEFF5;">
+                  <%= item.label %>
+                </div>
+                <div style="height:170px; display:flex; align-items:center; justify-content:center; background:#E5E8EC; overflow:hidden;">
+                  <img 
+                    src="<%= proxyUrl %>" 
+                    alt="<%= item.label %>" 
+                    style="width:100%; height:100%; object-fit:cover; cursor:pointer;" 
+                    onclick="openImageModal('<%= proxyUrl %>', '<%= item.label %> - <%= v.nama_odp %>')"
+                    onerror="this.onerror=null; this.src='/uploads/placeholder.jpg'"
+                  >
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div style="text-align:center; padding: 22px; color:var(--ink-2); font-size:13px;">
+            Tidak ada foto eviden yang tersimpan untuk pekerjaan ini.
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Card Rincian Material -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-icon-box"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <h2 class="card-title" style="font-size:20px;">Rincian Material Terpakai</h2>
+          </div>
+          <button type="button" class="btn-pill btn-primary" onclick="openAddMaterialModal()">
+            <i class="fa-solid fa-plus"></i> Tambah Material
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table" id="material-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">No</th>
+                <th>Nama Material</th>
+                <th>Satuan</th>
+                <th style="text-align:right;">Qty</th>
+                <th style="text-align:right;">Harga Satuan (Rp)</th>
+                <th style="text-align:right;">Total Harga (Rp)</th>
+                <th style="width:50px; text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% 
+                let grandTotal = 0;
+                materials.forEach((m, idx) => { 
+                  grandTotal += (m.total_harga || 0);
+              %>
+                <tr>
+                  <td><%= idx + 1 %></td>
+                  <td><b><%= m.nama_material %></b></td>
+                  <td><%= m.satuan || '-' %></td>
+                  <td style="text-align:right;"><%= m.qty %></td>
+                  <td style="text-align:right;"><%= Number(m.harga_satuan).toLocaleString('id-ID') %></td>
+                  <td style="text-align:right; font-weight:700;"><%= Number(m.total_harga).toLocaleString('id-ID') %></td>
+                  <td style="text-align:center;">
+                    <button type="button" class="btn-circle" style="color:var(--bad);" onclick="deleteMaterial(<%= m.id %>)" title="Hapus Material" aria-label="Hapus Material">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              <% }); %>
+
+              <% if (materials.length > 0) { %>
+                <tr style="background:#F9FAFB; font-weight:bold;">
+                  <td colspan="5" style="text-align:right; padding:12px;">GRAND TOTAL:</td>
+                  <td style="text-align:right; color:var(--navy); font-size:14px;">Rp <%= Number(grandTotal).toLocaleString('id-ID') %></td>
+                  <td></td>
+                </tr>
+              <% } else { %>
+                <tr class="no-paginate">
+                  <td colspan="7" style="text-align:center; padding:24px; color:var(--ink-2);">
+                    Belum ada data material yang dicatat.
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal Tambah Material -->
+  <div id="addMaterialModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width:440px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:16px; font-weight:600;">Tambah Material</h3>
+        <button type="button" class="btn-circle" onclick="closeAddMaterialModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="materialForm" style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--ink-3);">Nama Material</label>
+          <input type="text" id="matNama" class="filter-input" style="width:100%; border:1px solid var(--line);" placeholder="Contoh: Kabel Dropcore" required>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--ink-3);">Satuan</label>
+            <input type="text" id="matSatuan" class="filter-input" style="width:100%; border:1px solid var(--line);" placeholder="Meter / Unit" value="Unit">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--ink-3);">Qty</label>
+            <input type="number" step="any" id="matQty" class="filter-input" style="width:100%; border:1px solid var(--line);" placeholder="1" value="1" required>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--ink-3);">Harga Satuan (Rp)</label>
+          <input type="number" id="matHarga" class="filter-input" style="width:100%; border:1px solid var(--line);" placeholder="0" value="0">
+        </div>
+
+        <button type="submit" class="btn-pill btn-primary" style="margin-top:8px;">
+          <i class="fa-solid fa-save"></i> Simpan Material
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    const validasiId = <%= v.id %>;
+
+    // UPDATE STATUS
+    document.getElementById('btnUpdateStatus').addEventListener('click', async () => {
+      const status = document.getElementById('statusSelect').value;
+      showToast('Menyimpan perubahan status...', 'normal');
+
+      try {
+        const res = await fetch(`/api/validasi/${validasiId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`Status berhasil diperbarui ke ${status.toUpperCase()}`, 'ok');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.error || 'Gagal mengubah status', 'error');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    });
+
+    // GENERATE BAST
+    const btnGenBast = document.getElementById('btnGenerateBast');
+    if (btnGenBast) {
+      btnGenBast.addEventListener('click', async () => {
+        showToast('Membuat dokumen BAST...', 'normal');
+        try {
+          const res = await fetch(`/api/validasi/${validasiId}/generate-bast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await res.json();
+          if (data.ok) {
+            showToast('BAST berhasil di-generate!', 'ok');
+            setTimeout(() => window.location.reload(), 1200);
+          } else {
+            showToast(data.error || 'Gagal generate BAST', 'error');
+          }
+        } catch (e) {
+          showToast('Error: ' + e.message, 'error');
+        }
+      });
+    }
+
+    // MANCORE UPLOAD
+    document.getElementById('mancoreFileInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      showToast('Mengunggah diagram mancore...', 'normal');
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('validasiId', validasiId);
+
+      try {
+        const res = await fetch('/api/upload-mancore', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Mancore berhasil disimpan!', 'ok');
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      } catch (err) {
+        showToast('Error upload: ' + err.message, 'error');
+      }
+    });
+
+    // MATERIAL CRUD
+    function openAddMaterialModal() {
+      document.getElementById('addMaterialModal').classList.add('show');
+    }
+
+    function closeAddMaterialModal() {
+      document.getElementById('addMaterialModal').classList.remove('show');
+    }
+
+    document.getElementById('materialForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nama_material = document.getElementById('matNama').value.trim();
+      const satuan = document.getElementById('matSatuan').value.trim();
+      const qty = parseFloat(document.getElementById('matQty').value) || 0;
+      const harga_satuan = parseFloat(document.getElementById('matHarga').value) || 0;
+
+      try {
+        const res = await fetch(`/api/validasi/${validasiId}/material`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nama_material, satuan, qty, harga_satuan })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Material berhasil ditambahkan', 'ok');
+          closeAddMaterialModal();
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          showToast(data.error || 'Gagal menambah material', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+
+    async function deleteMaterial(matId) {
+      if (!confirm('Hapus material ini?')) return;
+      try {
+        const res = await fetch(`/api/validasi/${validasiId}/material/${matId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Material dihapus', 'ok');
+          setTimeout(() => window.location.reload(), 800);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

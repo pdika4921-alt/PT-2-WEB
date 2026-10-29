@@ -1,0 +1,51 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Tombol Navigasi Kembali -->
+  <div>
+    <a href="/dbpt2" class="btn-pill" style="background:#FFFFFF;">
+      <i class="fa-solid fa-arrow-left"></i> Kembali ke DB PT 2 Lengkap
+    </a>
+  </div>
+
+  <!-- Kartu Detail 29 Field -->
+  <div class="card">
+    <div style="border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 24px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <h1 style="font-size: 32px; font-weight: 400; color: var(--ink); letter-spacing: -0.5px;" class="mono">
+            <%= row.odp_name %>
+          </h1>
+          <p style="font-size: 14px; color: var(--ink-2); margin-top: 4px;">
+            <%= row.nama_lop || 'Tanpa Nama LOP' %> · Area <%= row.area || '-' %> · STO <%= row.sto || '-' %>
+          </p>
+        </div>
+        <div>
+          <% if (row.progress_update && row.progress_update.includes('GOLIVE')) { %>
+            <span class="pill pill-dark" style="font-size:12px; padding:6px 14px;">GOLIVE</span>
+          <% } else { %>
+            <span class="pill pill-blue" style="font-size:12px; padding:6px 14px;"><%= row.progress_update || 'PROGRESS' %></span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid 2 Kolom 29 Field -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px;">
+      <% fields.forEach(f => { %>
+        <div style="border-bottom: 1px solid var(--line); padding-bottom: 8px;">
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--ink-3); letter-spacing: 0.5px; margin-bottom: 4px;">
+            <%= f.label %>
+          </div>
+          <div style="font-size: 14px; font-weight: 500; color: var(--ink);" class="<%= (f.label.includes('OLT') || f.label.includes('ID') || f.label.includes('ODP')) ? 'mono' : '' %>">
+            <%= f.val || '-' %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+</main>
+
+<%- include('partials/footer') %>

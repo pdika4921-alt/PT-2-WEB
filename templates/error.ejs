@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terjadi Kesalahan — PT 2 KONS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: linear-gradient(160deg, rgba(226, 26, 37, 0.9) 0%, rgba(142, 12, 22, 0.95) 100%), url('/sidebar.jpg') center center / cover no-repeat fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+    }
+    .error-logo-plate {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 10px 16px;
+      display: inline-block;
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(60, 0, 5, 0.3);
+    }
+    .error-logo {
+      width: 190px;
+      height: auto;
+      display: block;
+    }
+    .error-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border-radius: 28px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 60px rgba(40, 48, 80, 0.22);
+      text-align: center;
+    }
+    .error-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #FDF2F2;
+      color: var(--bad);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <div class="error-logo-plate">
+      <img src="/logo ta.png" alt="Telkom Akses" class="error-logo">
+    </div>
+    <div class="error-icon">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <h1 style="font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Terjadi Kesalahan</h1>
+    <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.5; margin-bottom: 24px;">
+      <%= typeof message !== 'undefined' ? message : 'Halaman yang Anda tuju tidak dapat diproses saat ini.' %>
+    </p>
+
+    <a href="/dashboard" class="btn-pill btn-primary" style="display: inline-flex;">
+      <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
+    </a>
+  </div>
+</body>
+</html>

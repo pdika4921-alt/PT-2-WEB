@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body.access-body {
+      background: linear-gradient(160deg, rgba(226, 26, 37, 0.9) 0%, rgba(142, 12, 22, 0.95) 100%), url('/sidebar.jpg') center center / cover no-repeat fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .access-logo-plate {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 9px 14px;
+      display: inline-block;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 18px rgba(60, 0, 5, 0.3);
+    }
+    .access-logo {
+      width: 170px;
+      height: auto;
+      display: block;
+    }
+    .access-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border-radius: 18px;
+      padding: 26px 24px 22px;
+      box-shadow: var(--shadow-card);
+      text-align: center;
+    }
+    .access-icon {
+      width: 46px;
+      height: 46px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: #F0F2F5;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .access-page {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.3px;
+    }
+    .access-hint {
+      font-size: 11.5px;
+      color: var(--ink-2);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .access-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+      text-align: left;
+    }
+    .access-form label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-2);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .access-input-wrap {
+      position: relative;
+    }
+    .access-input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 40px 0 12px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      background: #F8F9FA;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .access-input:focus {
+      background: #FFFFFF;
+      border-color: var(--blue);
+    }
+    .access-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      color: var(--ink-3);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px;
+    }
+    .access-error {
+      font-size: 11.5px;
+      color: var(--bad);
+      font-weight: 600;
+    }
+    .access-submit {
+      height: 38px;
+      border: none;
+      border-radius: 10px;
+      background: var(--navy);
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .access-submit:hover {
+      background: #111622;
+    }
+    .access-back {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 11.5px;
+      color: var(--ink-2);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .access-back:hover {
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body class="access-body">
+  <div class="access-card">
+    <div class="access-logo-plate">
+      <img src="/logo ta.png" alt="Telkom Akses" class="access-logo">
+    </div>
+    <div class="access-icon">
+      <i class="fa-solid fa-lock"></i>
+    </div>
+    <div class="access-page"><%= meta.label %></div>
+    <div class="access-hint">
+      Halaman ini dilindungi password.<br>Masukkan password akses untuk melanjutkan.
+    </div>
+
+    <form class="access-form" method="POST" action="/akses">
+      <input type="hidden" name="page" value="<%= page %>">
+      <input type="hidden" name="next" value="<%= next %>">
+
+      <label for="access-password">Password Akses</label>
+      <div class="access-input-wrap">
+        <input
+          type="password"
+          id="access-password"
+          name="password"
+          class="access-input"
+          placeholder="Masukkan password"
+          autofocus
+          required
+        >
+        <button type="button" class="access-toggle" id="togglePass" title="Tampilkan password" aria-label="Tampilkan password">
+          <i class="fa-regular fa-eye"></i>
+        </button>
+      </div>
+
+      <% if (error) { %>
+        <div class="access-error"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+      <% } %>
+
+      <button type="submit" class="access-submit">
+        <i class="fa-solid fa-unlock-keyhole"></i> Buka Halaman
+      </button>
+    </form>
+
+    <a href="/dashboard" class="access-back"><i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard</a>
+  </div>
+
+  <script>
+    document.getElementById('togglePass').addEventListener('click', () => {
+      const input = document.getElementById('access-password');
+      const icon = document.querySelector('#togglePass i');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    });
+
+    document.querySelector('.access-form').addEventListener('submit', (e) => {
+      const btn = e.target.querySelector('.access-submit');
+      if (!e.target.password.value.trim()) {
+        e.preventDefault();
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memeriksa...';
+    });
+  </script>
+</body>
+</html>

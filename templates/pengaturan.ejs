@@ -1,0 +1,176 @@
+<%- include('partials/topnav') %>
+
+<main style="display: flex; flex-direction: column; gap: 14px;">
+
+  <!-- Header -->
+  <div>
+    <h1 style="font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;">Pengaturan Sistem</h1>
+    <p style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">Kelola integrasi webhook, akun pengguna, sinkronisasi Google Sheet, dan status server.</p>
+  </div>
+
+  <!-- Grid 2 Kolom Card -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;" class="dashboard-grid-12">
+    
+    <!-- Kolom 1 Atas: Informasi Sistem -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-icon-box"><i class="fa-solid fa-server"></i></div>
+          <h2 class="card-title" style="font-size:20px;">Informasi Sistem</h2>
+        </div>
+        <span class="pill pill-dark">ONLINE</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:8px;">
+          <span style="color:var(--ink-2);">Aplikasi</span>
+          <b>PT 2 KONS MONITORING (pt2web)</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:8px;">
+          <span style="color:var(--ink-2);">Database Mode</span>
+          <span class="mono">SQLite 3 (WAL mode)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:8px;">
+          <span style="color:var(--ink-2);">Total Validasi Pekerjaan</span>
+          <b><%= totalData.validasi %> baris</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:8px;">
+          <span style="color:var(--ink-2);">Total Database PT2 Master</span>
+          <b><%= totalData.dbpt2 %> baris</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding-top:4px;">
+          <span style="color:var(--ink-2);">Waktu Server</span>
+          <span class="mono" style="font-size:12px;"><%= new Date().toLocaleString('id-ID') %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom 2 Atas: Webhook Integrasi -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-icon-box"><i class="fa-solid fa-plug"></i></div>
+          <h2 class="card-title" style="font-size:20px;">Webhook Integrasi</h2>
+        </div>
+        <span class="pill pill-dark">ACTIVE</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; font-size:12.5px;">
+        <div>
+          <div style="font-size:11px; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:4px;">Endpoint Form Submisi</div>
+          <div style="background:#F3F4F6; padding:8px 12px; border-radius:10px;" class="mono">POST /webhook/form</div>
+        </div>
+        <div>
+          <div style="font-size:11px; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:4px;">Header Rahasia Webhook</div>
+          <div style="background:#F3F4F6; padding:8px 12px; border-radius:10px;" class="mono">x-webhook-secret: pt2_webhook_secret_key</div>
+        </div>
+        <div>
+          <div style="font-size:11px; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:4px;">Callback BAST</div>
+          <div style="background:#F3F4F6; padding:8px 12px; border-radius:10px;" class="mono">POST /webhook/bast-callback</div>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-2); line-height:1.4;">
+          Skrip Google Apps Script pada spreadsheet otomatis meneruskan baris baru ke endpoint ini.
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom 1 Bawah: Manajemen User -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-icon-box"><i class="fa-solid fa-users"></i></div>
+          <h2 class="card-title" style="font-size:20px;">Manajemen User</h2>
+        </div>
+        <span class="chip-tag"><%= users.length %> User</span>
+      </div>
+
+      <div class="person-list">
+        <% users.forEach(u => { 
+          const initials = (u.nama || u.username).substring(0, 2).toUpperCase();
+        %>
+          <div class="person-row">
+            <div class="person-left">
+              <div class="person-avatar"><%= initials %></div>
+              <div>
+                <div class="person-name">
+                  <%= u.nama || u.username %>
+                  <span class="pill pill-dark" style="font-size:10px; padding:2px 8px;"><%= u.role.toUpperCase() %></span>
+                </div>
+                <div class="person-sub">@<%= u.username %> · Terdaftar <%= (u.created_at || '').split(' ')[0] %></div>
+              </div>
+            </div>
+            <span class="pill pill-ok" style="font-size:10.5px;">Aktif</span>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- Kolom 2 Bawah: Auto-Sync Database -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-icon-box"><i class="fa-solid fa-arrows-rotate"></i></div>
+          <h2 class="card-title" style="font-size:20px;">Auto-Sync Database</h2>
+        </div>
+        <button type="button" class="btn-circle" onclick="refreshSyncStatus()" title="Refresh Status" aria-label="Refresh Status">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; font-size:13px; margin-bottom: 12px;">
+        <div style="background:#F9FAFB; padding:12px; border-radius:12px; border:1px solid var(--line);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <b>Database PT2 Master</b>
+            <span class="pill <%= syncStatus.dbpt2.lastSyncStatus === 'success' ? 'pill-ok' : 'pill-outline' %>">
+              <%= syncStatus.dbpt2.lastSyncStatus || 'IDLE' %>
+            </span>
+          </div>
+          <div style="font-size:11.5px; color:var(--ink-2);">
+            Sync Terakhir: <span class="mono"><%= syncStatus.dbpt2.lastSyncTime || 'Belum pernah' %></span>
+          </div>
+        </div>
+
+        <div style="background:#F9FAFB; padding:12px; border-radius:12px; border:1px solid var(--line);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <b>Validasi Pekerjaan</b>
+            <span class="pill <%= syncStatus.validasi.lastSyncStatus === 'success' ? 'pill-ok' : 'pill-outline' %>">
+              <%= syncStatus.validasi.lastSyncStatus || 'IDLE' %>
+            </span>
+          </div>
+          <div style="font-size:11.5px; color:var(--ink-2);">
+            Sync Terakhir: <span class="mono"><%= syncStatus.validasi.lastSyncTime || 'Belum pernah' %></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button type="button" class="btn-pill btn-primary" onclick="triggerSync('dbpt2')">
+          <i class="fa-solid fa-database"></i> Sync Database PT2
+        </button>
+        <button type="button" class="btn-pill" style="background:#FFFFFF;" onclick="triggerSync('validasi')">
+          <i class="fa-solid fa-clipboard-check"></i> Sync Validasi Pekerjaan
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+  async function refreshSyncStatus() {
+    showToast('Memperbarui status sinkronisasi...', 'normal');
+    try {
+      const res = await fetch('/api/sync/status');
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Status berhasil dimuat!', 'ok');
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch (e) {
+      showToast('Gagal memuat status: ' + e.message, 'error');
+    }
+  }
+</script>
+
+<%- include('partials/footer') %>
