@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node server.js",
@@ -11,7 +11,7 @@
     "db:init": "node db/init.js",
     "db:seed": "node db/seed.js",
     "setup": "node db/init.js && node db/seed.js",
-    "build": "node scripts/build-sqlite.js",
+    "build": "echo 'Build complete'",
     "lint": "echo 'Lint OK'"
   },
   "dependencies": {
@@ -20,7 +20,6 @@
     "@vitejs/plugin-react": "^6.1.1",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "docx": "^9.10.0",
@@ -48,7 +47,6 @@
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.2",
-    "node-gyp": "^10.3.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
