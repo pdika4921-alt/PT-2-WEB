@@ -2,13 +2,16 @@
   "name": "react-example",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
     "db:init": "node db/init.js",
     "db:seed": "node db/seed.js",
     "setup": "node db/init.js && node db/seed.js",
-    "build": "echo 'Build complete'",
+    "build": "npm rebuild better-sqlite3 --build-from-source",
     "lint": "echo 'Lint OK'"
   },
   "dependencies": {
