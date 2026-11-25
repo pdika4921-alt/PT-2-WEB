@@ -6,6 +6,10 @@
   const _missing = (typeof missing !== 'undefined' && Array.isArray(missing)) ? missing : [];
   const _filtered = (typeof filtered !== 'undefined') ? filtered : _odpList.length > 0;
   const _requestedCount = (typeof requestedCount !== 'undefined') ? requestedCount : _odpList.length;
+  const _enteredCount = (typeof enteredCount !== 'undefined') ? enteredCount : _requestedCount;
+  const _emptyCount = (typeof emptyCount !== 'undefined') ? emptyCount : 0;
+  const _duplicateCount = (typeof duplicateCount !== 'undefined') ? duplicateCount : 0;
+  const _duplicates = (typeof duplicates !== 'undefined' && Array.isArray(duplicates)) ? duplicates : [];
 %>
 
 <main style="display: flex; flex-direction: column; gap: 14px;">
@@ -43,6 +47,28 @@
             ODP tersebut sudah dikeluarkan dari daftar di atas dan tidak ikut dimuat / digenerate.
           </div>
         </details>
+      <% } %>
+
+      <% if (_duplicateCount) { %>
+        <details open style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:10px 14px;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#B45309;">
+            <i class="fa-solid fa-copy"></i>
+            <%= _duplicateCount %> baris duplikat dari <%= _duplicates.length %> nama — klik untuk sembunyikan
+          </summary>
+          <ul style="margin:8px 0 0; padding-left:18px; color:#92400E; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;">
+            <% _duplicates.forEach(function(d) { %><li><%= d.name %> — <%= d.count %>× (lebih <%= d.count - 1 %>)</li><% }); %>
+          </ul>
+          <div style="margin-top:6px; font-size:11px; color:#92400E;">
+            Duplikat tetap dihitung di jumlah baris yang dimasukkan, tetapi hanya diproses sekali di tabel.
+          </div>
+        </details>
+      <% } %>
+
+      <% if (_emptyCount) { %>
+        <div style="background:#F3F4F6; border:1px solid #E5E7EB; border-radius:12px; padding:8px 14px; font-size:11px; color:#6B7280;">
+          <i class="fa-solid fa-circle-info"></i>
+          <%= _emptyCount %> baris kosong diabaikan (tidak dihitung sebagai ODP).
+        </div>
       <% } %>
 
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -83,11 +109,14 @@
       </div>
       <div style="font-size:12px; color:var(--ink-2);">
         <% if (_filtered) { %>
-          Data dimuat: <b><%= rows.length %></b> item
-          <span style="color:var(--ink-2);">dari <%= _requestedCount %> nama ODP yang diminta</span>
-          <% if (_missing.length) { %>
-            <span style="color:#DC2626;"> — <%= _missing.length %> tidak ditemukan</span>
-          <% } %>
+          Dimasukkan: <b><%= _enteredCount %></b> baris
+          <span style="color:var(--ink-2);">→ <%= _requestedCount %> nama unik</span>
+          <div style="margin-top:2px;">
+            <b><%= rows.length %></b> valid
+            <span style="color:#DC2626;"> · <%= _missing.length %> tidak ditemukan</span>
+            <% if (_duplicateCount) { %><span style="color:#B45309;"> · <%= _duplicateCount %> duplikat</span><% } %>
+            <% if (_emptyCount) { %><span style="color:#6B7280;"> · <%= _emptyCount %> kosong</span><% } %>
+          </div>
         <% } else { %>
           Belum ada data dimuat
         <% } %>
@@ -240,14 +269,15 @@
 
   document.getElementById('btnLoadData').addEventListener('click', () => {
     const text = document.getElementById('odpListInput').value;
-    const odpList = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const rawLines = text.split(/\r?\n|,/).map(s => s.trim());
+    const odpList = rawLines.filter(Boolean);
     if (odpList.length === 0) {
       showToast('Masukkan minimal satu nama ODP', 'error');
       return;
     }
 
-    // Load presisi lewat server: tabel & nomor urut dibentuk ulang dari daftar ini
-    window.location.href = '/valid4?odp=' + encodeURIComponent(odpList.join('\n'));
+    // Kirim semua baris (termasuk kosong & duplikat) agar server bisa melaporkan rinciannya
+    window.location.href = '/valid4?odp=' + encodeURIComponent(rawLines.join('\n'));
   });
 
   // Tunggu dashboard.js (showToast) selesai dimuat sebelum pakai showToast
@@ -255,9 +285,18 @@
     <% if (_filtered) { %>
       const missing = <%- JSON.stringify(_missing) %>;
       const found = <%= rows.length %>;
-      showToast(`Memuat ${found} ODP yang sesuai daftar`, 'ok');
+      const entered = <%= _enteredCount %>;
+      const duplicateCount = <%= _duplicateCount %>;
+      const emptyCount = <%= _emptyCount %>;
+
+      showToast(`Dari ${entered} baris: ${found} dimuat, ${missing.length} tidak ditemukan`, 'ok');
       if (missing.length) {
         showToast(`${missing.length} ODP tidak ditemukan: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''} — lihat daftar lengkap di halaman`, 'error');
+      }
+      if (duplicateCount) {
+        showToast(`${duplicateCount} baris duplikat dan ${emptyCount} baris kosong tidak diproses ulang — rincian di halaman`, 'normal');
+      } else if (emptyCount) {
+        showToast(`${emptyCount} baris kosong diabaikan`, 'normal');
       }
     <% } %>
   });

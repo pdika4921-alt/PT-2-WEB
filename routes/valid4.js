@@ -6,10 +6,20 @@ const { getDetailData } = require('../controllers/detailHelper');
 router.get('/', (req, res) => {
   try {
     // Daftar ODP dari "Load Data" (?odp=ODP-A%0AODP-B): tabel harus persis berisi daftar itu
-    const odpList = [...new Set(
-      String(req.query.odp || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
-    )];
-    const filtered = odpList.length > 0;
+    const rawLines = String(req.query.odp || '').split(/\r?\n|,/).map(s => s.trim());
+    const filledLines = rawLines.filter(Boolean);
+    const emptyCount = rawLines.length - filledLines.length;
+
+    // Hitung duplikat supaya tidak ada baris yang hilang tanpa informasi
+    const freq = new Map();
+    filledLines.forEach(n => freq.set(n, (freq.get(n) || 0) + 1));
+    const odpList = [...freq.keys()];
+    const duplicates = [...freq.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([name, count]) => ({ name, count }));
+    const duplicateCount = duplicates.reduce((sum, d) => sum + d.count - 1, 0);
+
+    const filtered = rawLines.length > 0;
 
     let rows = [];
     let missing = [];
@@ -43,6 +53,10 @@ router.get('/', (req, res) => {
       totalCount: rows.length,
       odpList: cleanOdpList,
       requestedCount: odpList.length,
+      enteredCount: rawLines.length,
+      emptyCount,
+      duplicateCount,
+      duplicates,
       missing,
       filtered
     });

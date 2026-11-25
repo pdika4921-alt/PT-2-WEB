@@ -23,13 +23,21 @@
       ></textarea>
 
       <div id="rekonMissingPanel" style="display:none; background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:10px 14px;">
-        <div style="font-size:12px; font-weight:700; color:#B91C1C;">
+        <div id="rekonLoadSummary" style="font-size:12px; font-weight:700; color:#B91C1C;"></div>
+        <div style="font-size:12px; font-weight:700; color:#B91C1C; margin-top:4px;">
           <i class="fa-solid fa-triangle-exclamation"></i>
           <span id="rekonMissingCount">0</span> ODP tidak ditemukan / gagal dimuat
         </div>
         <ul id="rekonMissingList" style="margin:8px 0 0; padding-left:18px; color:#7F1D1D; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;"></ul>
+        <div id="rekonDuplicateWrap" style="display:none; margin-top:8px; color:#92400E;">
+          <div style="font-size:12px; font-weight:700;">
+            <i class="fa-solid fa-copy"></i> <span id="rekonDuplicateCount">0</span> baris duplikat
+          </div>
+          <ul id="rekonDuplicateList" style="margin:6px 0 0; padding-left:18px; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:140px; overflow:auto;"></ul>
+        </div>
+        <div id="rekonEmptyInfo" style="display:none; margin-top:6px; font-size:11px; color:#6B7280;"></div>
         <div style="margin-top:6px; font-size:11px; color:#991B1B;">
-          ODP tersebut sudah dikeluarkan dari daftar di atas dan tidak ikut dimuat / digenerate.
+          ODP tidak ditemukan / duplikat sudah dikeluarkan dari daftar di atas dan tidak ikut digenerate.
         </div>
       </div>
 
@@ -202,10 +210,18 @@
     }[c]));
   }
 
-  function renderMissingPanel(missing) {
+  function renderLoadInfo(missing, info) {
     const panel = document.getElementById('rekonMissingPanel');
     const list = document.getElementById('rekonMissingList');
     if (!panel || !list) return;
+
+    const hasInfo = info && info.enteredCount;
+    document.getElementById('rekonLoadSummary').textContent = hasInfo
+      ? `Dimasukkan ${info.enteredCount} baris → ${info.uniqueCount} nama unik | ${info.loadedCount} dimuat, ${missing.length} tidak ditemukan` +
+        (info.duplicateCount ? `, ${info.duplicateCount} duplikat` : '') +
+        (info.emptyCount ? `, ${info.emptyCount} kosong` : '')
+      : '';
+
     document.getElementById('rekonMissingCount').textContent = String(missing.length);
     list.innerHTML = missing.map(m => {
       const reason = m.reason && m.reason !== 'tidak ditemukan'
@@ -213,15 +229,57 @@
         : '';
       return `<li>${escapeHtml(m.name)}${reason}</li>`;
     }).join('');
-    panel.style.display = missing.length ? 'block' : 'none';
+
+    const dupWrap = document.getElementById('rekonDuplicateWrap');
+    if (info && info.duplicateCount) {
+      dupWrap.style.display = 'block';
+      document.getElementById('rekonDuplicateCount').textContent = String(info.duplicateCount);
+      document.getElementById('rekonDuplicateList').innerHTML = info.duplicates.map(d =>
+        `<li>${escapeHtml(d.name)} — ${d.count}× (lebih ${d.count - 1})</li>`
+      ).join('');
+    } else {
+      dupWrap.style.display = 'none';
+    }
+
+    const emptyInfo = document.getElementById('rekonEmptyInfo');
+    emptyInfo.style.display = (info && info.emptyCount) ? 'block' : 'none';
+    emptyInfo.textContent = (info && info.emptyCount) ? `${info.emptyCount} baris kosong diabaikan.` : '';
+
+    const visible = missing.length > 0 || !!(info && (info.duplicateCount || info.emptyCount));
+    panel.style.display = visible ? 'block' : 'none';
+    panel.style.background = missing.length ? '#FEF2F2' : '#FFFBEB';
+    panel.style.borderColor = missing.length ? '#FECACA' : '#FDE68A';
   }
 
   async function loadOdpData() {
     const text = document.getElementById('rekonOdpList').value;
-    const odpList = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const rawLines = text.split(/\r?\n|,/).map(s => s.trim());
+    const filled = rawLines.filter(Boolean);
+    const emptyCount = rawLines.length - filled.length;
 
-    if (odpList.length === 0) {
+    const freq = new Map();
+    filled.forEach(n => freq.set(n, (freq.get(n) || 0) + 1));
+    const odpList = [...freq.keys()];
+    const duplicates = [...freq.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([name, count]) => ({ name, count }));
+    const duplicateCount = duplicates.reduce((sum, d) => sum + d.count - 1, 0);
+    const loadInfo = {
+      enteredCount: rawLines.length,
+      uniqueCount: odpList.length,
+      loadedCount: 0,
+      duplicateCount,
+      duplicates,
+      emptyCount
+    };
+
+    if (rawLines.length === 0) {
       showToast('Masukkan minimal satu nama ODP', 'error');
+      return;
+    }
+    if (filled.length === 0) {
+      renderLoadInfo([], loadInfo);
+      showToast(`${emptyCount} baris kosong diabaikan`, 'error');
       return;
     }
 
@@ -260,24 +318,30 @@
       hideRekonLoading();
     }
 
-    // Keluarkan ODP yang tidak ditemukan dari textarea agar tidak ikut digenerate
-    if (missing.length) {
-      document.getElementById('rekonOdpList').value = validNames.join('\n');
-    }
+    // Textarea hanya berisi ODP valid dan unik agar tidak ikut digenerate
+    document.getElementById('rekonOdpList').value = validNames.join('\n');
 
-    renderMissingPanel(missing);
+    loadInfo.loadedCount = currentOdpData.length;
+    renderLoadInfo(missing, loadInfo);
     renderRekonTable();
-    document.getElementById('rekonStatusText').textContent = missing.length
-      ? `Manual — ${currentOdpData.length} ODP dimuat, ${missing.length} tidak ditemukan / gagal dimuat`
-      : `Manual — ${currentOdpData.length} ODP dimuat`;
+    document.getElementById('rekonStatusText').textContent =
+      `Manual — ${rawLines.length} baris: ${currentOdpData.length} dimuat, ${missing.length} tidak ditemukan` +
+      (duplicateCount ? `, ${duplicateCount} duplikat` : '') +
+      (emptyCount ? `, ${emptyCount} kosong` : '');
 
-    showToast(`Berhasil memuat ${currentOdpData.length} data ODP`, currentOdpData.length ? 'ok' : 'error');
+    showToast(
+      `Dari ${rawLines.length} baris: ${currentOdpData.length} dimuat, ${missing.length} tidak ditemukan`,
+      currentOdpData.length ? 'ok' : 'error'
+    );
     if (missing.length) {
       const preview = missing.slice(0, 3).map(m => m.name).join(', ');
       showToast(
         `${missing.length} ODP tidak ditemukan / gagal dimuat: ${preview}${missing.length > 3 ? ', …' : ''} — lihat daftar lengkap di halaman`,
         'error'
       );
+    }
+    if (duplicateCount || emptyCount) {
+      showToast(`${duplicateCount} duplikat, ${emptyCount} kosong — rincian di halaman`, 'normal');
     }
   }
 
@@ -331,7 +395,7 @@
 
   // ===== MODE SHEET: ambil dari Google Sheet RESPON VALID 4 =====
   async function loadFromSheet() {
-    renderMissingPanel([]);
+    renderLoadInfo([], null);
     const tbody = document.getElementById('rekonTableBody');
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Mengambil data dari sheet RESPON VALID 4...</td></tr>`;
     document.getElementById('rekonStatusText').textContent = 'Mengambil data dari sheet...';
