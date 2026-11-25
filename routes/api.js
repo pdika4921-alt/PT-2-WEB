@@ -19,6 +19,16 @@ const {
 // Nama ODP boleh mengandung "/" (contoh: ODP-CSR-FC/51) — amankan untuk nama file
 const safeName = (s) => String(s || 'odp').replace(/[\\/:*?"<>|]+/g, '-');
 
+// Batasi semua generate maksimal 100 baris/ODP per request.
+const GENERATE_MAX = 100;
+function clampGenerateItems(items, res, label) {
+  if (items.length <= GENERATE_MAX) return items;
+  console.warn(`${label}: ${items.length} data diterima, dibatasi ${GENERATE_MAX}.`);
+  res.setHeader('X-Generate-Limit', String(GENERATE_MAX));
+  res.setHeader('X-Requested-Count', String(items.length));
+  return items.slice(0, GENERATE_MAX);
+}
+
 // Merge item dari request body dengan baris DB lengkap (frontend hanya kirim id + field editable)
 function hydrateItems(items) {
   const getById = db.prepare('SELECT * FROM validasi_pekerjaan WHERE id = ?');
@@ -375,6 +385,7 @@ router.post('/valid4/generate', async (req, res) => {
       items = hydrateItems(items);
     }
 
+    items = clampGenerateItems(items, res, 'valid4/pdf');
     const result = await generateValid4Pdf(items, Boolean(skipImages));
     res.setHeader('Content-Type', result.type);
     res.setHeader('Content-Disposition', `attachment; filename="VALID4_MANCORE_${Date.now()}.${result.type === 'application/pdf' ? 'pdf' : 'html'}"`);
@@ -396,6 +407,7 @@ router.post('/valid4/generate-excel', async (req, res) => {
       items = hydrateItems(items);
     }
 
+    items = clampGenerateItems(items, res, 'valid4/excel');
     const buffer = await generateValid4Excel(items, Boolean(skipImages), Boolean(tableOnly));
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="VALID4_MANCORE_${Date.now()}.xlsx"`);
@@ -416,6 +428,8 @@ router.post('/valid4/generate-image', async (req, res) => {
     } else {
       items = hydrateItems(items);
     }
+
+    items = clampGenerateItems(items, res, 'valid4/image');
 
     if (items.length === 1) {
       const item = items[0];

@@ -268,8 +268,17 @@ router.post('/api/generate-word', async (req, res) => {
     const { odpList, title } = req.body;
     const list = Array.isArray(odpList) ? odpList : (odpList ? odpList.split(',').map(s => s.trim()) : []);
 
+    // Batasi generate word maksimal 100 ODP per request.
+    let finalList = list;
+    if (list.length > 100) {
+      console.warn(`generate-word: ${list.length} ODP diterima, dibatasi 100.`);
+      res.setHeader('X-Generate-Limit', '100');
+      res.setHeader('X-Requested-Count', String(list.length));
+      finalList = list.slice(0, 100);
+    }
+
     // Judul opsional; bila kosong akan memakai judul dari templates/masterpt2.docx
-    const buffer = await generateRekonWord(list, { title: typeof title === 'string' ? title.trim() : '' });
+    const buffer = await generateRekonWord(finalList, { title: typeof title === 'string' ? title.trim() : '' });
     const filename = `REKON_PT2_${Date.now()}.docx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');

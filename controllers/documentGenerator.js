@@ -1013,6 +1013,13 @@ function buildDocxPageSize(page) {
 }
 
 async function generateRekonWord(odpList = [], options = {}) {
+  if (!Array.isArray(odpList)) odpList = [];
+  const MAX_ODP = 100;
+  if (odpList.length > MAX_ODP) {
+    console.warn(`generateRekonWord: ${odpList.length} ODP diterima, dibatasi ${MAX_ODP}.`);
+    odpList = odpList.slice(0, MAX_ODP);
+  }
+
   const {
     Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun,
     WidthType, AlignmentType, ImageRun, BorderStyle, HeightRule,

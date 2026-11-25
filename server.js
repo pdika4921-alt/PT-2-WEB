@@ -122,7 +122,7 @@ if (config.VALIDASI_SHEET_CSV_URL) {
   }, 8000);
 }
 
-const PORT = config.PORT || 3000;
+const PORT = config.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[PT 2 KONS MONITORING] Server running on port ${PORT}`);
 });
