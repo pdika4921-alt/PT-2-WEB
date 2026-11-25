@@ -325,17 +325,18 @@
         try {
           const res = await fetch(`/rekon/api/odp?odp=${encodeURIComponent(odp)}`);
           const json = await res.json();
-          if (json.ok && json.found !== false) {
+          if (json.ok && json.found === true) {
             validNames.push(odp);
             currentOdpData.push({
               no: currentOdpData.length + 1,
               odp_name: odp,
-              id_nama_lop: json.db?.nama_lop || json.rekon?.id_nama_lop || 'LOP-' + odp,
-              witel_sto: json.db?.sto || json.rekon?.witel_sto || 'BKS',
+              // Jangan mengarang LOP/STO. Pakai data asli kalau ada, sisanya "-".
+              id_nama_lop: json.db?.nama_lop || json.rekon?.id_nama_lop || json.val?.no_order || '-',
+              witel_sto: json.db?.sto || json.rekon?.witel_sto || json.val?.sto || '-',
               photos: json.photos || {}
             });
           } else {
-            missing.push({ name: odp, reason: 'tidak ditemukan' });
+            missing.push({ name: odp, reason: json.reason || (json.ok === false ? 'gagal dimuat' : 'tidak ditemukan') });
           }
         } catch (e) {
           console.error(e);

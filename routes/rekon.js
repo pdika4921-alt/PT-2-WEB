@@ -38,6 +38,21 @@ const WHITELIST_FIELDS = [
   'foto_mancore'
 ];
 
+// Field eviden di validasi_pekerjaan yang dipakai sebagai fallback foto Rekon.
+const VALIDASI_PHOTO_FIELDS = [
+  'eviden_odp_terbuka',
+  'eviden_odp_tertutup',
+  'eviden_closure',
+  'eviden_foto_lengkap',
+  'eviden_spliter',
+  'eviden_opm1',
+  'eviden_opm2',
+  'mancore_image',
+  'url_foto_eviden'
+];
+const hasAnyPhoto = (row, fields) =>
+  fields.some(f => String((row && row[f]) || '').trim() !== '');
+
 // Generate Word maksimal 100 ODP per file; sisanya jadi beberapa file di dalam ZIP.
 const GENERATE_MAX = 100;
 function splitWordChunks(list, res) {
@@ -147,7 +162,7 @@ router.get('/api/sheet-list', (req, res) => {
       return {
         no: offset + i + 1,
         odp: r.nama_odp || '-',
-        id_lop: rk.id_nama_lop || lop.nama_lop || lop.id_ihld || r.nama_odp || '-',
+        id_lop: rk.id_nama_lop || lop.nama_lop || lop.id_ihld || '-',
         sto: r.sto || lop.sto || rk.witel_sto || '-',
         teknisi: r.teknisi || '-',
         district: r.district || '-',
@@ -182,7 +197,6 @@ router.get('/api/odp', (req, res) => {
     const dbRow = db.prepare('SELECT * FROM database_pt2 WHERE odp_name = ? COLLATE NOCASE').get(odp);
     const rekonRow = db.prepare('SELECT * FROM rekon_pt2 WHERE odp_name = ? COLLATE NOCASE').get(odp);
     const valRow = db.prepare('SELECT * FROM validasi_pekerjaan WHERE nama_odp = ? COLLATE NOCASE ORDER BY id DESC').get(odp);
-    const found = Boolean(dbRow || rekonRow || valRow);
 
     // Fallback photos dari eviden
     const photos = {
@@ -196,12 +210,31 @@ router.get('/api/odp', (req, res) => {
       foto_mancore: toPhotoUrl(rekonRow?.foto_mancore || valRow?.mancore_image)
     };
 
+    const hasPhoto = hasAnyPhoto(valRow, VALIDASI_PHOTO_FIELDS) ||
+      hasAnyPhoto(rekonRow, WHITELIST_FIELDS);
+
+    // ODP hanya dianggap termuat kalau ada data master (DBPT2/Rekon)
+    // ATAU ada eviden foto di validasi. Baris validasi kosong bukan data.
+    const found = Boolean(dbRow || rekonRow || hasPhoto);
+    const reason = found
+      ? ''
+      : (valRow ? 'data validasi kosong / tanpa eviden' : 'tidak ditemukan');
+
     return res.json({
       ok: true,
       found,
+      reason,
+      hasPhoto,
       odp,
       db: dbRow || null,
       rekon: rekonRow || null,
+      val: valRow ? {
+        id: valRow.id,
+        nama_odp: valRow.nama_odp,
+        sto: valRow.sto,
+        no_order: valRow.no_order,
+        status_validasi: valRow.status_validasi
+      } : null,
       photos
     });
   } catch (err) {
