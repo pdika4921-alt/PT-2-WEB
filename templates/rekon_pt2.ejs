@@ -221,6 +221,30 @@
     }[c]));
   }
 
+  // Pakai nama file dari server (Content-Disposition). Server mengirim .zip
+  // bila hasil digabung beberapa bagian — jangan dipaksa jadi .docx.
+  function downloadName(res, fallback) {
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m && m[1]) {
+      try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }
+    const type = res.headers.get('Content-Type') || '';
+    if (type.includes('zip')) return fallback.replace(/\.[^.]+$/, '.zip');
+    return fallback;
+  }
+
+  function saveBlob(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  }
+
   function renderLoadInfo(missing, info) {
     const panel = document.getElementById('rekonMissingPanel');
     const list = document.getElementById('rekonMissingList');
@@ -833,12 +857,15 @@
       }
 
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `REKON_PT2_${Date.now()}.docx`;
-      a.click();
-      showToast('Dokumen Word berhasil diunduh', 'ok');
+      const filename = downloadName(res, `REKON_PT2_${Date.now()}.docx`);
+      saveBlob(blob, filename);
+      const chunks = Number(res.headers.get('X-Generate-Chunks') || 1);
+      showToast(
+        chunks > 1
+          ? `Berhasil diunduh: ${chunks} bagian DOCX dalam file ${filename} — ekstrak dulu sebelum dibuka`
+          : `Dokumen Word berhasil diunduh: ${filename}`,
+        'ok'
+      );
     } catch (err) {
       showToast('Gagal generate Word: ' + err.message, 'error');
     } finally {

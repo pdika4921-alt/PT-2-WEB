@@ -266,6 +266,30 @@
     btnRunGenerate.style.opacity = '';
   }
 
+  // Pakai nama file dari server (Content-Disposition). Bila server mengirim ZIP,
+  // jangan dipaksa menyimpan sebagai .pdf/.xlsx.
+  function downloadName(res, fallback) {
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m && m[1]) {
+      try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }
+    const type = res.headers.get('Content-Type') || '';
+    if (type.includes('zip')) return fallback.replace(/\.[^.]+$/, '.zip');
+    return fallback;
+  }
+
+  function saveBlob(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  }
+
   // Ambil blob hasil generate; bila server error, lempar pesan dari respons server
   async function fetchFile(url, body) {
     const res = await fetch(url, {
@@ -281,7 +305,7 @@
       } catch (e) { /* respons bukan JSON */ }
       throw new Error(msg);
     }
-    return res.blob();
+    return { blob: await res.blob(), res };
   }
 
   document.getElementById('btnLoadData').addEventListener('click', () => {
@@ -363,30 +387,25 @@
 
     try {
       if (choice === 'pdf_foto' || choice === 'pdf_nofoto') {
-        const blob = await fetchFile('/api/valid4/generate', { data: items, skipImages: choice === 'pdf_nofoto' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `VALID4_${Date.now()}.pdf`;
-        a.click();
-        showToast('PDF berhasil diunduh', 'ok');
+        const { blob, res } = await fetchFile('/api/valid4/generate', { data: items, skipImages: choice === 'pdf_nofoto' });
+        const filename = downloadName(res, `VALID4_${Date.now()}.pdf`);
+        saveBlob(blob, filename);
+        const chunks = Number(res.headers.get('X-Generate-Chunks') || 1);
+        showToast(chunks > 1 ? `PDF berhasil diunduh: ${chunks} bagian dalam ZIP` : 'PDF berhasil diunduh', 'ok');
       } else if (choice.startsWith('excel')) {
         const tableOnly = choice === 'excel_table';
         const skipImages = choice === 'excel_nofoto' || tableOnly;
-        const blob = await fetchFile('/api/valid4/generate-excel', { data: items, skipImages, tableOnly });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `VALID4_${Date.now()}.xlsx`;
-        a.click();
-        showToast('Excel berhasil diunduh', 'ok');
+        const { blob, res } = await fetchFile('/api/valid4/generate-excel', { data: items, skipImages, tableOnly });
+        const filename = downloadName(res, `VALID4_${Date.now()}.xlsx`);
+        saveBlob(blob, filename);
+        const chunks = Number(res.headers.get('X-Generate-Chunks') || 1);
+        showToast(chunks > 1 ? `Excel berhasil diunduh: ${chunks} bagian dalam ZIP` : 'Excel berhasil diunduh', 'ok');
       } else if (choice === 'image') {
-        const blob = await fetchFile('/api/valid4/generate-image', { data: items });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = items.length === 1 ? `mancore_${items[0].nama_odp}.jpg` : `MANCORE_TABLES_${Date.now()}.zip`;
-        a.click();
+        const { blob, res } = await fetchFile('/api/valid4/generate-image', { data: items });
+        const filename = downloadName(res, items.length === 1
+          ? `mancore_${items[0].nama_odp}.jpg`
+          : `MANCORE_TABLES_${Date.now()}.zip`);
+        saveBlob(blob, filename);
         showToast('Gambar berhasil diunduh', 'ok');
       }
     } catch (err) {
