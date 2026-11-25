@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= typeof title !== 'undefined' ? title : 'PT 2 KONS Monitoring' %></title>
+  <link rel="icon" href="data:,">
   <!-- Font Awesome 6.5.1 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Stylesheet Twisty Design System -->
@@ -27,6 +28,7 @@
           <li><a href="/rekon" class="<%= (typeof page !== 'undefined' && page === 'rekon') ? 'active' : '' %>"><i class="fa-solid fa-scale-balanced"></i><span>Rekon PT2</span></a></li>
           <li><a href="/rekon-freelance" class="<%= (typeof page !== 'undefined' && page === 'rekon-freelance') ? 'active' : '' %>"><i class="fa-solid fa-user-check"></i><span>Rekon Freelance</span></a></li>
           <li><a href="/warehouse" class="<%= (typeof page !== 'undefined' && page === 'warehouse') ? 'active' : '' %>"><i class="fa-solid fa-warehouse"></i><span>WAREHOUSE</span></a></li>
+          <li><a href="/odp-monitoring" class="<%= (typeof page !== 'undefined' && page === 'odp-monitoring') ? 'active' : '' %>"><i class="fa-solid fa-boxes-stacked"></i><span>Monitoring ODP PT2</span></a></li>
           <li><a href="/pengaturan" class="<%= (typeof page !== 'undefined' && page === 'pengaturan') ? 'active' : '' %>"><i class="fa-solid fa-gear"></i><span>Pengaturan</span></a></li>
         </ul>
       </nav>

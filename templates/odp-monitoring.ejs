@@ -1,0 +1,524 @@
+<%- include('partials/topnav') %>
+
+<%
+  function scriptJson(v) {
+    return JSON.stringify(v)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+  }
+  const odpFetched = fetchedAt
+    ? new Date(fetchedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' })
+    : '-';
+%>
+
+<style>
+  .odp-page { --merah:#E30613; --navy:#0F264A; --muted:#6B7686; --garis:#E6EAF0; }
+  .odp-page .odp-head {
+    background:linear-gradient(110deg, var(--navy) 0%, #173A6B 62%, var(--merah) 160%);
+    color:#fff; border-radius:14px; padding:20px 24px; display:flex; justify-content:space-between;
+    align-items:center; gap:16px; flex-wrap:wrap; box-shadow:0 8px 24px rgba(15,38,74,.18);
+  }
+  .odp-page .odp-head h1 { font-size:25px; font-weight:600; letter-spacing:-.4px; margin:0; }
+  .odp-page .odp-head p { font-size:12px; opacity:.85; margin:5px 0 0; }
+  .odp-page .odp-tag { display:inline-block; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; letter-spacing:.08em; }
+  .odp-page .odp-btn { border:0; border-radius:8px; padding:9px 14px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:7px; background:#fff; color:var(--navy); }
+  .odp-page .odp-btn.merah { background:var(--merah); color:#fff; }
+  .odp-page .odp-btn:hover { filter:brightness(.95); }
+  .odp-page .odp-btn:disabled { opacity:.6; cursor:wait; }
+  .odp-page .kpi-card { border-top:3px solid var(--navy); }
+  .odp-page .kpi-card.merah { border-top-color:var(--merah); }
+  .odp-page .kpi-card .kpi-num { color:var(--navy); }
+  .odp-page .kpi-card.merah .kpi-num { color:var(--merah); }
+  .odp-page .odp-tabs { display:flex; gap:4px; border-bottom:2px solid var(--garis); margin-bottom:14px; flex-wrap:wrap; }
+  .odp-page .odp-tab { border:0; background:transparent; padding:10px 16px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; }
+  .odp-page .odp-tab.active { color:var(--merah); border-bottom-color:var(--merah); }
+  .odp-page .odp-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:20px; font-size:10px; font-weight:800; letter-spacing:.03em; white-space:nowrap; }
+  .odp-page .odp-badge.ok { background:#E7F7EE; color:#137A43; }
+  .odp-page .odp-badge.no { background:#FDECEE; color:var(--merah); }
+  .odp-page .odp-table td, .odp-page .odp-table th { white-space:nowrap; font-size:11px; padding:8px 10px; }
+  .odp-page .odp-click { cursor:pointer; }
+  .odp-page .odp-click:hover { background:#F4F7FB; }
+  .odp-page .bar-row { display:grid; grid-template-columns:110px 1fr 64px; align-items:center; gap:10px; margin:8px 0; font-size:11px; }
+  .odp-page .bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--navy); font-weight:700; }
+  .odp-page .bar-track { height:12px; background:#EEF1F5; border-radius:8px; overflow:hidden; }
+  .odp-page .bar-fill { height:100%; border-radius:8px; background:linear-gradient(90deg,var(--navy),#3F6DA8); }
+  .odp-page .bar-fill.merah { background:linear-gradient(90deg,var(--merah),#F25762); }
+  .odp-page .donut { width:172px; height:172px; border-radius:50%; position:relative; flex:none; }
+  .odp-page .donut::after { content:''; position:absolute; inset:32px; background:#fff; border-radius:50%; }
+  .odp-page .donut-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1; }
+  .odp-page .donut-label b { font-size:22px; color:var(--navy); }
+  .odp-page .donut-label span { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .odp-page .legend { display:flex; flex-direction:column; gap:7px; font-size:11px; }
+  .odp-page .legend i { width:9px; height:9px; border-radius:3px; display:inline-block; margin-right:7px; }
+  .odp-page .prog-track { width:100%; min-width:80px; height:8px; border-radius:6px; background:#EEF1F5; overflow:hidden; }
+  .odp-page .prog-fill { height:100%; background:var(--merah); border-radius:6px; }
+  .odp-page .odp-modal { position:fixed; inset:0; background:rgba(10,24,45,.5); display:none; align-items:center; justify-content:center; z-index:9999; padding:18px; }
+  .odp-page .odp-modal.show { display:flex; }
+  .odp-page .odp-modal-card { background:#fff; border-radius:12px; width:min(1000px,96vw); max-height:86vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.28); }
+  .odp-page .odp-toast { position:fixed; right:20px; bottom:20px; background:var(--navy); color:#fff; padding:10px 15px; border-radius:8px; font-size:12px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:10000; }
+  .odp-page .odp-toast.show { opacity:1; }
+  @media (max-width:760px) {
+    .odp-page .kpi-row { grid-template-columns:repeat(2,1fr) !important; }
+    .odp-page .odp-grid2 { grid-template-columns:1fr !important; }
+    .odp-page .odp-head h1 { font-size:20px; }
+  }
+</style>
+
+<div class="odp-page">
+<main style="display:flex; flex-direction:column; gap:14px;">
+
+  <div class="odp-head">
+    <div>
+      <span class="odp-tag">TELKOM AKSES · REGIONAL 2</span>
+      <h1>Monitoring Pengambilan ODP PT 2</h1>
+      <p>Pemantauan pengambilan unit ODP per lokasi PT 2 · 10 tab SO wilayah · Sumber: DASHBOARD MATERIAL</p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <span style="font-size:11px; opacity:.8; align-self:center;" id="odpFetched">Data: <%= odpFetched %></span>
+      <button type="button" class="odp-btn" id="odpRefresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+      <button type="button" class="odp-btn" id="odpCsv"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+      <button type="button" class="odp-btn merah" id="odpExcel"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+    </div>
+  </div>
+
+  <% if (data.loading) { %>
+    <div id="odpLoading" style="background:#EEF4FF; border:1px solid #C9D9F5; color:var(--navy); padding:10px 14px; border-radius:8px; font-size:12px;">
+      <i class="fa-solid fa-rotate fa-spin"></i> Memindai 10 tab SO DASHBOARD MATERIAL… Data akan tampil otomatis setelah selesai.
+    </div>
+  <% } %>
+  <% if (data.error) { %>
+    <div style="background:#FFF3F3; border:1px solid #F5C2C2; color:#8E2C2C; padding:10px 14px; border-radius:8px; font-size:12px;">
+      <i class="fa-solid fa-triangle-exclamation"></i> Gagal mengambil sheet terbaru (<%= data.error %>).
+      <%= data.stale ? 'Menampilkan data tersimpan terakhir.' : 'Data masih kosong.' %>
+    </div>
+  <% } %>
+
+  <div class="kpi-row" style="grid-template-columns:repeat(4, 1fr);">
+    <div class="kpi-card"><div class="kpi-label">TOTAL LOKASI PT 2 TERDAFTAR</div><div class="kpi-num" id="kpiLokasi"><%= data.totals.lokasi %></div></div>
+    <div class="kpi-card"><div class="kpi-label">SUDAH AMBIL ODP</div><div class="kpi-num" id="kpiSudah" style="color:#137A43 !important;"><%= data.totals.sudah %></div></div>
+    <div class="kpi-card merah"><div class="kpi-label">BELUM AMBIL ODP</div><div class="kpi-num" id="kpiBelum"><%= data.totals.belum %></div></div>
+    <div class="kpi-card merah"><div class="kpi-label">TOTAL UNIT ODP TERAMBIL</div><div class="kpi-num" id="kpiUnit"><%= data.totals.unit.toLocaleString('id-ID') %></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-icon-box" style="background:#FDECEE; color:var(--merah);"><i class="fa-solid fa-sliders"></i></div>
+        <h2 class="card-title" style="font-size:18px;">Filter Data</h2>
+      </div>
+      <div style="font-size:11px; color:var(--muted);" id="odpInfo">
+        <%= data.counts.sourceRows.toLocaleString('id-ID') %> transaksi terpilih · <%= data.counts.sheetRows.toLocaleString('id-ID') %> baris sheet dipindai
+      </div>
+    </div>
+    <div class="filter-bar">
+      <select id="fSto" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua STO / Gudang SO</option>
+        <% data.soStats.map(s => { %>
+          <option value="<%= s.code %>"><%= s.code %> · <%= s.name %> (<%= s.lokasi %>)</option>
+        <% }); %>
+      </select>
+      <select id="fProgram" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua Program</option>
+        <option value="KONSTRUKSI">KONSTRUKSI</option>
+        <option value="EXPAND">EXPAND</option>
+        <option value="QE">QE</option>
+        <option value="QE AKSES">QE AKSES</option>
+      </select>
+      <select id="fStatus" class="filter-input" style="cursor:pointer;">
+        <option value="">Semua Status</option>
+        <option value="SUDAH">Sudah Ambil ODP</option>
+        <option value="BELUM">Belum Ambil ODP / Qty 0</option>
+      </select>
+      <input type="text" id="fSearch" class="filter-input" style="min-width:250px;" placeholder="Cari lokasi (MAINT/KONST) atau mitra…">
+      <button type="button" class="odp-btn" id="fReset" style="border:1px solid var(--garis);"><i class="fa-solid fa-eraser"></i> Reset</button>
+    </div>
+  </div>
+
+  <div class="card" style="padding-bottom:16px;">
+    <div class="odp-tabs">
+      <button type="button" class="odp-tab active" data-tab="pivot">Tab 1 · Matriks &amp; Status Lokasi</button>
+      <button type="button" class="odp-tab" data-tab="chart">Tab 2 · Grafik STO &amp; Program</button>
+      <button type="button" class="odp-tab" data-tab="mitra">Tab 3 · Rekap Mitra &amp; Timeline</button>
+    </div>
+
+    <!-- TAB 1 -->
+    <div id="tab-pivot">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+        <div style="font-size:12px; color:var(--muted);">Baris: <b id="pivotCount">0</b> lokasi · klik baris untuk detail</div>
+        <div style="font-size:11px;"><span class="odp-badge ok">SUDAH AMBIL ODP</span> <span class="odp-badge no">BELUM AMBIL ODP (0)</span></div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table odp-table" id="pivotTable">
+          <thead><tr id="pivotHead"></tr></thead>
+          <tbody id="pivotBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2 -->
+    <div id="tab-chart" style="display:none;">
+      <div class="odp-grid2" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="border:1px solid var(--garis); border-radius:10px; padding:14px;">
+          <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">Total Unit ODP per STO / Gudang SO</h3>
+          <div id="chartSto"></div>
+        </div>
+        <div style="border:1px solid var(--garis); border-radius:10px; padding:14px;">
+          <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">Proporsi Tipe ODP</h3>
+          <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+            <div class="donut" id="donutODP"><div class="donut-label"><b id="donutTotal">0</b><span>unit ODP</span></div></div>
+            <div class="legend" id="donutLegend"></div>
+          </div>
+        </div>
+        <div style="border:1px solid var(--garis); border-radius:10px; padding:14px; grid-column:1/-1;">
+          <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">Distribusi ODP per Kategori Program</h3>
+          <div id="chartProgram"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3 -->
+    <div id="tab-mitra" style="display:none;">
+      <div style="border:1px solid var(--garis); border-radius:10px; padding:14px; margin-bottom:16px;">
+        <h3 style="font-size:14px; color:var(--navy); margin:0 0 6px;">Tren Mingguan Pengambilan ODP</h3>
+        <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">Total unit ODP yang dikeluarkan per minggu (ISO week)</div>
+        <div id="timeline"></div>
+      </div>
+      <h3 style="font-size:14px; color:var(--navy); margin:0 0 8px;">Progres Pengambilan ODP per Mitra</h3>
+      <div class="table-wrap">
+        <table class="data-table odp-table">
+          <thead><tr><th>MITRA PELAKSANA</th><th style="text-align:right;">LOKASI</th><th style="text-align:right;">SUDAH</th><th style="text-align:right;">BELUM</th><th style="text-align:right;">UNIT ODP</th><th style="min-width:160px;">PROGRES</th></tr></thead>
+          <tbody id="mitraBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="odp-modal" id="odpModal">
+  <div class="odp-modal-card">
+    <div style="padding:14px 18px; border-bottom:1px solid var(--garis); display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+      <div>
+        <div style="font-size:10px; color:var(--muted); letter-spacing:.08em;" id="modalLabel">DETAIL LOKASI PT 2</div>
+        <h3 id="modalTitle" style="font-size:18px; color:var(--navy); margin:3px 0 0; word-break:break-word;"></h3>
+      </div>
+      <button type="button" class="odp-btn" id="modalClose" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:14px 18px 20px;" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="odp-toast" id="odpToast"></div>
+</div>
+
+<script>
+  const ODP_DATA = <%- scriptJson(data) %>;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+  const num = (v) => Number(v) || 0;
+  const fmt = (v) => num(v).toLocaleString('id-ID');
+  const MAT_COLS = ODP_DATA.materials.slice(0, 12);
+  let filtered = [];
+  let summary = null;
+
+  function applyFilters() {
+    const sto = $('fSto').value;
+    const program = $('fProgram').value;
+    const status = $('fStatus').value;
+    const q = $('fSearch').value.trim().toLowerCase();
+    filtered = ODP_DATA.locations.filter(l => {
+      if (sto && (l.soCode || l.sto) !== sto) return false;
+      if (program && l.program !== program) return false;
+      if (status && l.status !== status) return false;
+      if (q && !(`${l.lokasi} ${l.mitra}`.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    buildSummary();
+  }
+
+  function buildSummary() {
+    const materials = new Map(MAT_COLS.map(m => [m.id, { id: m.id, nama: m.nama, qty: 0, lokasi: 0 }]));
+    const sto = new Map(), program = new Map(), mitra = new Map(), weeks = new Map();
+    let sudah = 0, belum = 0, unit = 0;
+    filtered.forEach(l => {
+      if (l.status === 'SUDAH') sudah += 1; else belum += 1;
+      unit += num(l.odpQty);
+      const soKey = l.soCode || l.sto;
+      const s = sto.get(soKey) || { label: soKey, qty: 0 }; s.qty += num(l.odpQty); sto.set(soKey, s);
+      const p = program.get(l.program || 'LAIN') || { label: l.program || 'LAIN', qty: 0 }; p.qty += num(l.odpQty); program.set(l.program || 'LAIN', p);
+      const m = mitra.get(l.mitra) || { mitra: l.mitra, lokasi: 0, sudah: 0, belum: 0, qty: 0 };
+      m.lokasi += 1; m[l.status === 'SUDAH' ? 'sudah' : 'belum'] += 1; m.qty += num(l.odpQty); mitra.set(l.mitra, m);
+      l.materials.forEach(mat => {
+        const g = materials.get(mat.id) || { id: mat.id, nama: mat.nama, qty: 0, lokasi: 0 };
+        g.qty += num(mat.qty); g.lokasi += 1; materials.set(mat.id, g);
+      });
+      Object.entries(l.weeks || {}).forEach(([w, v]) => weeks.set(w, (weeks.get(w) || 0) + num(v)));
+    });
+    summary = {
+      materials: [...materials.values()].sort((a, b) => b.qty - a.qty),
+      sto: [...sto.values()].sort((a, b) => b.qty - a.qty),
+      program: [...program.values()].sort((a, b) => b.qty - a.qty),
+      mitra: [...mitra.values()].sort((a, b) => b.qty - a.qty || a.mitra.localeCompare(b.mitra)),
+      weeks: [...weeks.entries()].map(([week, qty]) => ({ week, qty })).sort((a, b) => a.week.localeCompare(b.week)),
+      sudah, belum, unit
+    };
+  }
+
+  function renderKpi() {
+    $('kpiLokasi').textContent = fmt(filtered.length);
+    $('kpiSudah').textContent = fmt(summary.sudah);
+    $('kpiBelum').textContent = fmt(summary.belum);
+    $('kpiUnit').textContent = fmt(summary.unit);
+  }
+
+  function renderPivot() {
+    $('pivotCount').textContent = fmt(filtered.length);
+    $('pivotHead').innerHTML = '<th>STO / GUDANG</th><th>NAMA LOKASI (MAINT/KONST)</th><th>MITRA</th><th>PROGRAM</th>'
+      + MAT_COLS.map(m => `<th style="text-align:right;">${esc(m.id)}</th>`).join('')
+      + '<th style="text-align:right;">GRAND TOTAL QTY</th><th>STATUS</th>';
+    $('pivotBody').innerHTML = filtered.map((l, i) => {
+      const mats = new Map(l.materials.map(m => [m.id, num(m.qty)]));
+      return `<tr class="odp-click" data-idx="${i}">
+        <td><b>${esc(l.soCode || l.sto)}</b> <span style="color:var(--muted); font-size:10px;">${esc(l.sto)}</span></td><td>${esc(l.lokasi)}</td><td>${esc(l.mitra)}</td>
+        <td><span class="odp-badge ok">${esc(l.program || '-')}</span></td>
+        ${MAT_COLS.map(m => `<td style="text-align:right;">${mats.get(m.id) ? fmt(mats.get(m.id)) : '-'}</td>`).join('')}
+        <td style="text-align:right;"><b>${fmt(l.odpQty)}</b></td>
+        <td>${l.status === 'SUDAH'
+          ? '<span class="odp-badge ok"><i class="fa-solid fa-circle-check"></i> SUDAH AMBIL ODP</span>'
+          : '<span class="odp-badge no"><i class="fa-solid fa-circle-exclamation"></i> BELUM AMBIL ODP (0)</span>'}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="' + (5 + MAT_COLS.length + 2) + '" style="text-align:center; color:var(--muted);">Tidak ada data</td></tr>';
+  }
+
+  function barChart(items, merah) {
+    const max = Math.max(1, ...items.map(i => num(i.qty)));
+    return items.slice(0, 12).map(i => `
+      <div class="bar-row">
+        <span class="bar-label" title="${esc(i.label)}">${esc(i.label)}</span>
+        <div class="bar-track"><div class="bar-fill ${merah ? 'merah' : ''}" style="width:${Math.max(2, num(i.qty) / max * 100)}%"></div></div>
+        <b style="text-align:right; color:var(--navy);">${fmt(i.qty)}</b>
+      </div>`).join('') || '<div style="font-size:11px; color:var(--muted);">Tidak ada data</div>';
+  }
+
+  const DONUT_COLORS = ['#E30613', '#0F264A', '#3F6DA8', '#F2A65A', '#2E9E6B', '#8E7CC3', '#C4CBD6'];
+
+  function renderCharts() {
+    $('chartSto').innerHTML = barChart(summary.sto, false);
+    $('chartProgram').innerHTML = barChart(summary.program, true);
+    const mats = summary.materials.filter(m => num(m.qty) > 0).slice(0, 6);
+    const others = summary.materials.filter(m => num(m.qty) > 0).slice(6).reduce((s, m) => s + num(m.qty), 0);
+    const parts = mats.map((m, i) => ({ label: m.id, qty: num(m.qty), color: DONUT_COLORS[i % DONUT_COLORS.length] }));
+    if (others > 0) parts.push({ label: 'LAINNYA', qty: others, color: DONUT_COLORS[6] });
+    const total = parts.reduce((s, p) => s + p.qty, 0) || 1;
+    let acc = 0;
+    const stops = parts.map(p => {
+      const from = acc / total * 360; acc += p.qty;
+      return `${p.color} ${from.toFixed(2)}deg ${(acc / total * 360).toFixed(2)}deg`;
+    });
+    $('donutODP').style.background = parts.length ? `conic-gradient(${stops.join(',')})` : '#EEF1F5';
+    $('donutTotal').textContent = fmt(summary.unit);
+    $('donutLegend').innerHTML = parts.map(p => `<div><i style="background:${p.color}"></i>${esc(p.label)} — <b>${fmt(p.qty)}</b></div>`).join('');
+  }
+
+  function renderTimeline() {
+    const weeks = summary.weeks;
+    if (!weeks.length) { $('timeline').innerHTML = '<div style="font-size:11px; color:var(--muted);">Tidak ada data mingguan</div>'; return; }
+    const W = 900, H = 210, pad = 34;
+    const max = Math.max(1, ...weeks.map(w => num(w.qty)));
+    const step = weeks.length > 1 ? (W - pad * 2) / (weeks.length - 1) : 0;
+    const pts = weeks.map((w, i) => [pad + i * step, H - pad - (num(w.qty) / max) * (H - pad * 2)]);
+    const line = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const area = `M ${pad},${H - pad} L ` + pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' L ') + ` L ${(pad + (weeks.length - 1) * step).toFixed(1)},${H - pad} Z`;
+    $('timeline').innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:220px;" preserveAspectRatio="none">
+        <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="#E6EAF0"/>
+        <path d="${area}" fill="rgba(227,6,19,.10)"/>
+        <polyline points="${line}" fill="none" stroke="#E30613" stroke-width="2.5"/>
+        ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="#0F264A"><title>${esc(weeks[i].week)}: ${fmt(weeks[i].qty)} unit</title></circle>`).join('')}
+        ${weeks.map((w, i) => (weeks.length <= 16 || i % 2 === 0)
+          ? `<text x="${pts[i][0].toFixed(1)}" y="${H - 12}" text-anchor="middle" font-size="9" fill="#6B7686">${esc(w.week.replace(/^\d{4}-/, ''))}</text>` : '').join('')}
+      </svg>`;
+  }
+
+  function renderMitra() {
+    $('mitraBody').innerHTML = summary.mitra.map(m => `
+      <tr>
+        <td><b>${esc(m.mitra)}</b></td>
+        <td style="text-align:right;">${fmt(m.lokasi)}</td>
+        <td style="text-align:right; color:#137A43;">${fmt(m.sudah)}</td>
+        <td style="text-align:right; color:var(--merah);">${fmt(m.belum)}</td>
+        <td style="text-align:right;"><b>${fmt(m.qty)}</b></td>
+        <td><div class="prog-track"><div class="prog-fill" style="width:${m.lokasi ? (m.sudah / m.lokasi * 100).toFixed(1) : 0}%"></div></div>
+          <span style="font-size:10px; color:var(--muted);">${m.lokasi ? Math.round(m.sudah / m.lokasi * 100) : 0}% lokasi sudah ambil</span></td>
+      </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Tidak ada data</td></tr>';
+  }
+
+  function renderAll() {
+    applyFilters();
+    renderKpi();
+    renderPivot();
+    renderCharts();
+    renderTimeline();
+    renderMitra();
+  }
+
+  function showDetail(idx) {
+    const l = filtered[idx];
+    if (!l) return;
+    $('modalTitle').textContent = `${l.lokasi} — ${l.soCode || '-'} / ${l.sto}`;
+    const weeks = Object.entries(l.weeks || {}).sort((a, b) => a[0].localeCompare(b[0]));
+    $('modalBody').innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+        <div class="kpi-card" style="min-width:140px; flex:1;"><div class="kpi-label">MITRA</div><div style="font-size:13px; font-weight:700; color:var(--navy);">${esc(l.mitra)}</div></div>
+        <div class="kpi-card" style="min-width:120px; flex:1;"><div class="kpi-label">PROGRAM</div><div style="font-size:13px; font-weight:700; color:var(--navy);">${esc(l.program || '-')}</div></div>
+        <div class="kpi-card" style="min-width:120px; flex:1;"><div class="kpi-label">TOTAL QTY ODP</div><div style="font-size:20px; font-weight:700; color:var(--merah);">${fmt(l.odpQty)}</div></div>
+        <div class="kpi-card" style="min-width:120px; flex:1;"><div class="kpi-label">STATUS</div><div style="font-size:12px; margin-top:4px;">${l.status === 'SUDAH' ? '<span class="odp-badge ok">SUDAH AMBIL ODP</span>' : '<span class="odp-badge no">BELUM AMBIL ODP (0)</span>'}</div></div>
+      </div>
+      <h4 style="font-size:13px; color:var(--navy); margin:0 0 8px;">Material ODP yang diambil</h4>
+      <div class="table-wrap"><table class="data-table odp-table"><thead><tr><th>ID MATERIAL</th><th>NAMA MATERIAL</th><th style="text-align:right;">QTY</th></tr></thead>
+        <tbody>${l.materials.map(m => `<tr><td>${esc(m.id)}</td><td>${esc(m.nama)}</td><td style="text-align:right;">${fmt(m.qty)}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;">Tidak ada material ODP</td></tr>'}</tbody></table></div>
+      <h4 style="font-size:13px; color:var(--navy); margin:14px 0 8px;">Tren mingguan</h4>
+      <div class="table-wrap"><table class="data-table odp-table"><thead><tr><th>MINGGU</th><th style="text-align:right;">QTY ODP</th></tr></thead>
+        <tbody>${weeks.map(([w, v]) => `<tr><td>${esc(w)}</td><td style="text-align:right;">${fmt(v)}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;">Tidak ada data</td></tr>'}</tbody></table></div>`;
+    $('odpModal').classList.add('show');
+  }
+
+  function toast(msg) {
+    $('odpToast').textContent = msg;
+    $('odpToast').classList.add('show');
+    setTimeout(() => $('odpToast').classList.remove('show'), 2600);
+  }
+
+  function csvCell(v) {
+    const s = String(v == null ? '' : v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function exportData(asExcel) {
+    const head = ['SO / GUDANG', 'STO', 'NAMA LOKASI (MAINT/KONST)', 'MITRA', 'PROGRAM', 'STATUS', 'TANGGAL TERAKHIR']
+      .concat(MAT_COLS.map(m => m.id)).concat(['GRAND TOTAL QTY']);
+    const rows = filtered.map(l => {
+      const mats = new Map(l.materials.map(m => [m.id, num(m.qty)]));
+      return [l.soCode || '-', l.sto, l.lokasi, l.mitra, l.program || '-', l.status === 'SUDAH' ? 'SUDAH AMBIL ODP' : 'BELUM AMBIL ODP (0)', l.lastDate]
+        .concat(MAT_COLS.map(m => mats.get(m.id) || 0)).concat([l.odpQty]);
+    });
+    if (asExcel) {
+      const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">'
+        + '<tr>' + head.map(h => `<th style="background:#0F264A;color:#fff;">${esc(h)}</th>`).join('') + '</tr>'
+        + rows.map(r => '<tr>' + r.map(v => `<td>${esc(v)}</td>`).join('') + '</tr>').join('')
+        + '</table></body></html>';
+      download(new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8' }), 'MONITORING_ODP_PT2_' + Date.now() + '.xls');
+    } else {
+      const csv = [head.map(csvCell).join(',')].concat(rows.map(r => r.map(csvCell).join(','))).join('\r\n');
+      download(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }), 'MONITORING_ODP_PT2_' + Date.now() + '.csv');
+    }
+    toast('Diekspor: ' + filtered.length + ' lokasi');
+  }
+
+  function download(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function applyApiData(j) {
+    ODP_DATA.locations = j.locations;
+    ODP_DATA.materials = j.materials;
+    ODP_DATA.soStats = j.soStats || ODP_DATA.soStats;
+    ODP_DATA.stoStats = j.stoStats || ODP_DATA.stoStats;
+    ODP_DATA.programStats = j.programStats || ODP_DATA.programStats;
+    ODP_DATA.weekly = j.weekly || ODP_DATA.weekly;
+    ODP_DATA.totals = j.totals;
+    ODP_DATA.counts = j.counts;
+    ODP_DATA.loading = false;
+    const soSelect = $('fSto');
+    const current = soSelect.value;
+    (j.soStats || []).forEach(s => {
+      const opt = soSelect.querySelector(`option[value="${s.code}"]`);
+      if (opt) opt.textContent = `${s.code} · ${s.name} (${s.lokasi})`;
+    });
+    soSelect.value = current;
+    renderAll();
+    $('odpFetched').textContent = 'Data: ' + new Date(j.fetchedAt).toLocaleString('id-ID');
+  }
+
+  async function pollForData() {
+    const banner = $('odpLoading');
+    for (let i = 0; i < 40; i += 1) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      try {
+        const res = await fetch('/odp-monitoring/api/data');
+        const j = await res.json();
+        if (j.fetchedAt && j.locations && j.locations.length && !j.loading) {
+          applyApiData(j);
+          if (banner) banner.remove();
+          toast('Data ODP siap: ' + j.counts.sheetRows.toLocaleString('id-ID') + ' baris dipindai');
+          return;
+        }
+        if (j.error && !j.loading) {
+          if (banner) banner.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + esc(j.error);
+          toast('Gagal memindai sheet: ' + j.error);
+          return;
+        }
+      } catch (e) {
+        /* coba lagi */
+      }
+    }
+    if (banner) banner.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Pemindaian masih berlangsung. Klik Refresh jika perlu.';
+  }
+
+  async function refreshData() {
+    const btn = $('odpRefresh');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Memindai 10 tab…';
+    try {
+      const res = await fetch('/odp-monitoring/api/data?refresh=1');
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'Gagal memindai sheet');
+      applyApiData(j);
+      toast('Sheet diperbarui: ' + j.counts.sheetRows.toLocaleString('id-ID') + ' baris');
+    } catch (e) {
+      toast('Gagal refresh: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Refresh';
+    }
+  }
+
+  ['fSto', 'fProgram', 'fStatus', 'fSearch'].forEach(id => {
+    $(id).addEventListener(id === 'fSearch' ? 'input' : 'change', renderAll);
+  });
+  $('fReset').addEventListener('click', () => {
+    ['fSto', 'fProgram', 'fStatus', 'fSearch'].forEach(id => { $(id).value = ''; });
+    renderAll();
+  });
+  document.querySelectorAll('.odp-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.odp-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['pivot', 'chart', 'mitra'].forEach(t => { $('tab-' + t).style.display = t === btn.dataset.tab ? '' : 'none'; });
+    });
+  });
+  $('pivotBody').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-idx]');
+    if (tr) showDetail(Number(tr.dataset.idx));
+  });
+  $('modalClose').addEventListener('click', () => $('odpModal').classList.remove('show'));
+  $('odpModal').addEventListener('click', (e) => { if (e.target === $('odpModal')) $('odpModal').classList.remove('show'); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('odpModal').classList.remove('show'); });
+  $('odpRefresh').addEventListener('click', refreshData);
+  $('odpCsv').addEventListener('click', () => exportData(false));
+  $('odpExcel').addEventListener('click', () => exportData(true));
+
+  renderAll();
+  if (ODP_DATA.loading) pollForData();
+</script>
+
+<%- include('partials/footer') %>
