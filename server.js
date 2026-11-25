@@ -50,6 +50,7 @@ app.use('/akses', require('./routes/akses'));
 app.use('/valid4', requirePageAccess('valid4'));
 app.use('/rekon', requirePageAccess('rekon'));
 app.use('/rekon-freelance', requirePageAccess('rekon-freelance'));
+app.use('/warehouse', requirePageAccess('rekon-freelance'));
 app.use('/api/valid4', requirePageAccess('valid4'));
 app.use('/api', require('./routes/api'));
 app.use('/database', require('./routes/database'));
@@ -57,6 +58,7 @@ app.use('/valid4', require('./routes/valid4'));
 const rekonRouter = require('./routes/rekon');
 app.use('/rekon', rekonRouter);
 app.use('/rekon-freelance', require('./routes/rekon-freelance'));
+app.use('/warehouse', require('./routes/warehouse'));
 app.use('/pengaturan', require('./routes/pengaturan'));
 app.use('/dbpt2', require('./routes/dbpt2'));
 

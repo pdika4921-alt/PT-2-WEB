@@ -144,4 +144,7 @@ router.get('/detail/:id', (req, res) => {
   }
 });
 
+// Alias: dashboard WAREHOUSE juga bisa dibuka dari /rekon-freelance/warehouse
+router.use('/warehouse', require('../routes/warehouse'));
+
 module.exports = router;

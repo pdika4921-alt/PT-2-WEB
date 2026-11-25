@@ -8,6 +8,7 @@ module.exports = {
   ACCESS_PASSWORD: process.env.ACCESS_PASSWORD || 'akses2026',
   DBPT2_SHEET_CSV_URL: process.env.DBPT2_SHEET_CSV_URL || '',
   VALIDASI_SHEET_CSV_URL: process.env.VALIDASI_SHEET_CSV_URL || '',
+  WAREHOUSE_SHEET_CSV_URL: process.env.WAREHOUSE_SHEET_CSV_URL || '',
   DB_PATH: path.join(__dirname, '..', 'data', 'pt2monitoring.db'),
   UPLOAD_PATH: path.join(__dirname, '..', 'uploads')
 };
