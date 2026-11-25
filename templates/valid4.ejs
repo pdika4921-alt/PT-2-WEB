@@ -10,6 +10,8 @@
   const _emptyCount = (typeof emptyCount !== 'undefined') ? emptyCount : 0;
   const _duplicateCount = (typeof duplicateCount !== 'undefined') ? duplicateCount : 0;
   const _duplicates = (typeof duplicates !== 'undefined' && Array.isArray(duplicates)) ? duplicates : [];
+  const _noEvidence = (typeof noEvidence !== 'undefined' && Array.isArray(noEvidence)) ? noEvidence : [];
+  const _hasEvidence = (typeof hasEvidence === 'function') ? hasEvidence : () => true;
 %>
 
 <main style="display: flex; flex-direction: column; gap: 14px;">
@@ -69,6 +71,21 @@
           <i class="fa-solid fa-circle-info"></i>
           <%= _emptyCount %> baris kosong diabaikan (tidak dihitung sebagai ODP).
         </div>
+      <% } %>
+
+      <% if (_noEvidence.length) { %>
+        <details open style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:10px 14px;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#B45309;">
+            <i class="fa-solid fa-images"></i>
+            <%= _noEvidence.length %> ODP tanpa eviden foto — klik untuk sembunyikan
+          </summary>
+          <ul style="margin:8px 0 0; padding-left:18px; color:#92400E; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;">
+            <% _noEvidence.forEach(function(n) { %><li><%= n.nama_odp %></li><% }); %>
+          </ul>
+          <div style="margin-top:6px; font-size:11px; color:#92400E;">
+            ODP ini tetap tampil di tabel, tetapi otomatis dikeluarkan saat generate. Isi eviden dulu jika ingin digenerate.
+          </div>
+        </details>
       <% } %>
 
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -162,7 +179,7 @@
         </thead>
         <tbody>
           <% rows.forEach((r, idx) => { %>
-            <tr data-odp="<%= r.nama_odp %>" data-id="<%= r.id %>">
+            <tr data-odp="<%= r.nama_odp %>" data-id="<%= r.id %>" data-evidence="<%= _hasEvidence(r) ? '1' : '0' %>">
               <td><%= idx + 1 %></td>
               <td><%= r.sto || '-' %></td>
               <td class="mono"><%= r.ip_olt || '-' %></td>
@@ -315,7 +332,18 @@
       return;
     }
 
-    const items = visibleRows.map(r => ({
+    // ODP tanpa eviden foto dikeluarkan sebelum generate
+    const noEviden = visibleRows.filter(r => r.getAttribute('data-evidence') === '0');
+    const rowsToGenerate = visibleRows.filter(r => r.getAttribute('data-evidence') === '1');
+    if (noEviden.length) {
+      showToast(`${noEviden.length} ODP tanpa eviden dikeluarkan dari generate — rincian di halaman`, 'normal');
+    }
+    if (rowsToGenerate.length === 0) {
+      showToast('Tidak ada ODP dengan eviden untuk di-generate', 'error');
+      return;
+    }
+
+    const items = rowsToGenerate.map(r => ({
       id: r.getAttribute('data-id'),
       nama_odp: r.getAttribute('data-odp'),
       ea_ftm: r.querySelector('.ea-input')?.value || '',

@@ -74,6 +74,33 @@ function hydrateItems(items) {
   });
 }
 
+// ODP tanpa eviden foto tidak ikut generate (pengaman kedua selain filter di browser)
+const EVIDENCE_FIELDS = [
+  'url_foto_eviden',
+  'eviden_odp_terbuka',
+  'eviden_odp_tertutup',
+  'eviden_closure',
+  'eviden_foto_lengkap',
+  'eviden_spliter',
+  'eviden_opm1'
+];
+function hasEvidence(it) {
+  return EVIDENCE_FIELDS.some(f => String((it && it[f]) || '').trim() !== '');
+}
+function filterEvidenceItems(items, res, label) {
+  const kept = [];
+  const skipped = [];
+  items.forEach(it => (hasEvidence(it) ? kept : skipped).push(it));
+  if (skipped.length) {
+    console.log(`${label}: ${skipped.length} ODP tanpa eviden dilewati dari generate.`);
+    res.setHeader('X-No-Evidence-Count', String(skipped.length));
+    res.setHeader('X-No-Evidence-List', encodeURIComponent(
+      skipped.map(i => i.nama_odp || i.odp || '').join('\n')
+    ));
+  }
+  return kept;
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (!fs.existsSync(config.UPLOAD_PATH)) {
@@ -416,6 +443,11 @@ router.post('/valid4/generate', async (req, res) => {
       items = hydrateItems(items);
     }
 
+    items = filterEvidenceItems(items, res, 'valid4/pdf');
+    if (items.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Tidak ada ODP dengan eviden untuk digenerate' });
+    }
+
     const chunks = splitGenerateItems(items, res, 'valid4/pdf');
     if (chunks.length > 1) {
       await sendChunkedZip(
@@ -452,6 +484,11 @@ router.post('/valid4/generate-excel', async (req, res) => {
       items = hydrateItems(items);
     }
 
+    items = filterEvidenceItems(items, res, 'valid4/excel');
+    if (items.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Tidak ada ODP dengan eviden untuk digenerate' });
+    }
+
     const chunks = splitGenerateItems(items, res, 'valid4/excel');
     if (chunks.length > 1) {
       await sendChunkedZip(
@@ -486,6 +523,10 @@ router.post('/valid4/generate-image', async (req, res) => {
     }
 
     // Gambar sudah dikirim sebagai satu ZIP, jadi tidak perlu dipotong per 100.
+    items = filterEvidenceItems(items, res, 'valid4/image');
+    if (items.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Tidak ada ODP dengan eviden untuk digenerate' });
+    }
 
     if (items.length === 1) {
       const item = items[0];

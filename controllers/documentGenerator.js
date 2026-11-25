@@ -241,7 +241,9 @@ async function generateValid4Pdf(items, skipImages = false) {
   try {
     const browser = await getSharedBrowser();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+    // networkidle0 menunggu semua foto Google Drive selesai (ratusan request) dan sering timeout.
+    // networkidle2 jauh lebih cepat dan tetap menunggu gambar utama termuat.
+    await page.setContent(html, { waitUntil: 'networkidle2', timeout: 20000 });
     const pdfBuffer = await page.pdf({
       format: 'A4',
       landscape: true,

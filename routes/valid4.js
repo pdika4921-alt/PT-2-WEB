@@ -3,6 +3,20 @@ const router = express.Router();
 const db = require('../db/connection');
 const { getDetailData } = require('../controllers/detailHelper');
 
+// Field yang dipakai generator sebagai bukti foto. Satu saja terisi = ODP dianggap punya eviden.
+const EVIDENCE_FIELDS = [
+  'url_foto_eviden',
+  'eviden_odp_terbuka',
+  'eviden_odp_tertutup',
+  'eviden_closure',
+  'eviden_foto_lengkap',
+  'eviden_spliter',
+  'eviden_opm1'
+];
+function hasEvidence(item) {
+  return EVIDENCE_FIELDS.some(f => String((item && item[f]) || '').trim() !== '');
+}
+
 router.get('/', (req, res) => {
   try {
     // Daftar ODP dari "Load Data" (?odp=ODP-A%0AODP-B): tabel harus persis berisi daftar itu
@@ -45,6 +59,10 @@ router.get('/', (req, res) => {
       cleanOdpList = odpList.filter(n => byName.has(n.toUpperCase()));
     }
     // Tanpa daftar ODP: tabel kosong (tanpa auto-load data)
+    const noEvidence = rows.filter(r => !hasEvidence(r)).map(r => ({
+      id: r.id,
+      nama_odp: r.nama_odp
+    }));
 
     res.render('valid4', {
       page: 'valid4',
@@ -58,6 +76,8 @@ router.get('/', (req, res) => {
       duplicateCount,
       duplicates,
       missing,
+      noEvidence,
+      hasEvidence,
       filtered
     });
   } catch (err) {

@@ -307,13 +307,62 @@ router.post('/api/save', (req, res) => {
   }
 });
 
+// Pengaman server: ODP yang tidak punya satu pun foto tidak ikut generate Word
+const WORD_REKON_PHOTO_FIELDS = [
+  'foto_odp_luar', 'foto_odp_dalam', 'foto_joint_closure', 'foto_ps_1_4',
+  'foto_lengkap', 'foto_ufo_opm', 'foto_sivdum', 'foto_mancore'
+];
+const WORD_VAL_PHOTO_FIELDS = [
+  'eviden_odp_terbuka', 'eviden_odp_tertutup', 'eviden_closure',
+  'eviden_foto_lengkap', 'eviden_spliter', 'eviden_opm1', 'eviden_opm2', 'mancore_image'
+];
+function filterWordEvidence(list, res) {
+  if (list.length === 0) return list;
+  const placeholders = list.map(() => '?').join(',');
+  const rekonRows = db.prepare(
+    `SELECT odp_name, ${WORD_REKON_PHOTO_FIELDS.join(',')} FROM rekon_pt2 WHERE odp_name IN (${placeholders})`
+  ).all(...list);
+  const valRows = db.prepare(
+    `SELECT nama_odp, ${WORD_VAL_PHOTO_FIELDS.join(',')} FROM validasi_pekerjaan WHERE nama_odp IN (${placeholders})`
+  ).all(...list);
+
+  const withPhoto = new Set();
+  rekonRows.forEach(r => {
+    if (WORD_REKON_PHOTO_FIELDS.some(f => String(r[f] || '').trim())) {
+      withPhoto.add(String(r.odp_name || '').toUpperCase());
+    }
+  });
+  valRows.forEach(r => {
+    if (WORD_VAL_PHOTO_FIELDS.some(f => String(r[f] || '').trim())) {
+      withPhoto.add(String(r.nama_odp || '').toUpperCase());
+    }
+  });
+
+  const kept = [];
+  const skipped = [];
+  list.forEach(name => {
+    (withPhoto.has(String(name).toUpperCase()) ? kept : skipped).push(name);
+  });
+  if (skipped.length) {
+    console.log(`generate-word: ${skipped.length} ODP tanpa eviden dilewati dari generate.`);
+    res.setHeader('X-No-Evidence-Count', String(skipped.length));
+    res.setHeader('X-No-Evidence-List', encodeURIComponent(skipped.join('\n')));
+  }
+  return kept;
+}
+
 router.post('/api/generate-word', async (req, res) => {
   try {
     const { odpList, title } = req.body;
     const list = Array.isArray(odpList) ? odpList : (odpList ? odpList.split(',').map(s => s.trim()) : []);
     const cleanTitle = typeof title === 'string' ? title.trim() : '';
 
-    const chunks = splitWordChunks(list, res);
+    const evidenceList = filterWordEvidence(list, res);
+    if (evidenceList.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Tidak ada ODP dengan eviden untuk digenerate' });
+    }
+
+    const chunks = splitWordChunks(evidenceList, res);
     if (chunks.length > 1) {
       await sendWordZip(res, chunks, cleanTitle);
       return;

@@ -41,6 +41,17 @@
         </div>
       </div>
 
+      <div id="rekonEvidencePanel" style="display:none; background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:10px 14px;">
+        <div style="font-size:12px; font-weight:700; color:#B45309;">
+          <i class="fa-solid fa-images"></i>
+          <span id="rekonEvidenceCount">0</span> ODP tanpa eviden foto tidak ikut generate
+        </div>
+        <ul id="rekonEvidenceList" style="margin:8px 0 0; padding-left:18px; color:#92400E; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;"></ul>
+        <div style="margin-top:6px; font-size:11px; color:#92400E;">
+          Isi minimal satu foto pada ODP tersebut jika ingin dimasukkan ke dokumen Word.
+        </div>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div style="display:flex; gap:10px;">
           <button type="button" id="btnLoadRekon" class="btn-pill btn-primary">
@@ -251,6 +262,22 @@
     panel.style.borderColor = missing.length ? '#FECACA' : '#FDE68A';
   }
 
+  function hasAnyPhoto(item) {
+    const photos = (item && item.photos) || {};
+    return PHOTO_FIELDS.some(f => String(photos[f.key] || '').trim() !== '');
+  }
+
+  function renderEvidencePanel(items) {
+    const panel = document.getElementById('rekonEvidencePanel');
+    const list = document.getElementById('rekonEvidenceList');
+    if (!panel || !list) return;
+    document.getElementById('rekonEvidenceCount').textContent = String(items.length);
+    list.innerHTML = items.map(d =>
+      `<li>${escapeHtml(d.odp || d.odp_name || '-')}</li>`
+    ).join('');
+    panel.style.display = items.length ? 'block' : 'none';
+  }
+
   async function loadOdpData() {
     const text = document.getElementById('rekonOdpList').value;
     const rawLines = text.split(/\r?\n|,/).map(s => s.trim());
@@ -283,6 +310,7 @@
       return;
     }
 
+    renderEvidencePanel([]);
     const tbody = document.getElementById('rekonTableBody');
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data ODP...</td></tr>`;
     showRekonLoading('Memuat data ODP... mohon tunggu sampai selesai');
@@ -396,6 +424,7 @@
   // ===== MODE SHEET: ambil dari Google Sheet RESPON VALID 4 =====
   async function loadFromSheet() {
     renderLoadInfo([], null);
+    renderEvidencePanel([]);
     const tbody = document.getElementById('rekonTableBody');
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Mengambil data dari sheet RESPON VALID 4...</td></tr>`;
     document.getElementById('rekonStatusText').textContent = 'Mengambil data dari sheet...';
@@ -754,9 +783,21 @@
       return;
     }
 
+    // ODP tanpa foto eviden dikeluarkan sebelum generate
+    const noEviden = source.filter(d => !hasAnyPhoto(d));
+    const ready = source.filter(d => hasAnyPhoto(d));
+    renderEvidencePanel(noEviden);
+    if (noEviden.length) {
+      showToast(`${noEviden.length} ODP tanpa eviden dikeluarkan dari generate Word — rincian di halaman`, 'normal');
+    }
+    if (ready.length === 0) {
+      showToast('Tidak ada ODP dengan eviden untuk digenerate', 'error');
+      return;
+    }
+
     showToast('Membuat dokumen Word (Docx)...', 'normal');
     showRekonLoading('Membuat dokumen Word (Docx)... mohon tunggu sampai selesai, foto sedang diproses');
-    const odpList = source.map(d => d.odp || d.odp_name).filter(Boolean);
+    const odpList = ready.map(d => d.odp || d.odp_name).filter(Boolean);
 
     try {
       const res = await fetch('/rekon/api/generate-word', {
