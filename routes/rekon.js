@@ -413,4 +413,7 @@ router.post('/api/generate-word', async (req, res) => {
   }
 });
 
+// Diekspos supaya /health bisa dipakai untuk cek limit yang aktif di server.
+router.WORD_GENERATE_MAX = GENERATE_MAX;
+
 module.exports = router;

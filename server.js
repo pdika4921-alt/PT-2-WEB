@@ -54,7 +54,8 @@ app.use('/api/valid4', requirePageAccess('valid4'));
 app.use('/api', require('./routes/api'));
 app.use('/database', require('./routes/database'));
 app.use('/valid4', require('./routes/valid4'));
-app.use('/rekon', require('./routes/rekon'));
+const rekonRouter = require('./routes/rekon');
+app.use('/rekon', rekonRouter);
 app.use('/rekon-freelance', require('./routes/rekon-freelance'));
 app.use('/pengaturan', require('./routes/pengaturan'));
 app.use('/dbpt2', require('./routes/dbpt2'));
@@ -77,7 +78,11 @@ app.get('/', (req, res) => {
 
 // 10. GET /health
 app.get('/health', (req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
+  res.json({
+    ok: true,
+    ts: new Date().toISOString(),
+    rekonWordLimit: rekonRouter.WORD_GENERATE_MAX
+  });
 });
 
 // 11. 404 handler
