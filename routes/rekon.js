@@ -213,12 +213,10 @@ router.get('/api/odp', (req, res) => {
     const hasPhoto = hasAnyPhoto(valRow, VALIDASI_PHOTO_FIELDS) ||
       hasAnyPhoto(rekonRow, WHITELIST_FIELDS);
 
-    // ODP hanya dianggap termuat kalau ada data master (DBPT2/Rekon)
-    // ATAU ada eviden foto di validasi. Baris validasi kosong bukan data.
-    const found = Boolean(dbRow || rekonRow || hasPhoto);
-    const reason = found
-      ? ''
-      : (valRow ? 'data validasi kosong / tanpa eviden' : 'tidak ditemukan');
+    // Tetap dianggap termuat kalau ada baris di salah satu tabel.
+    // Bedanya: hasPhoto=false dipakai frontend untuk informasi + pengecualian generate.
+    const found = Boolean(dbRow || rekonRow || valRow);
+    const reason = !found ? 'tidak ditemukan' : '';
 
     return res.json({
       ok: true,

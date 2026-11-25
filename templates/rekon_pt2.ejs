@@ -318,6 +318,7 @@
     currentOdpData = [];
     const missing = [];
     const validNames = [];
+    const noEvidence = [];
 
     try {
       for (let i = 0; i < odpList.length; i++) {
@@ -335,6 +336,10 @@
               witel_sto: json.db?.sto || json.rekon?.witel_sto || json.val?.sto || '-',
               photos: json.photos || {}
             });
+            // Tetap tampil di tabel, tapi dicatat untuk dikecualikan dari generate.
+            if (json.hasPhoto === false) {
+              noEvidence.push({ odp, source: json.val ? 'validasi' : '-' });
+            }
           } else {
             missing.push({ name: odp, reason: json.reason || (json.ok === false ? 'gagal dimuat' : 'tidak ditemukan') });
           }
@@ -352,9 +357,11 @@
 
     loadInfo.loadedCount = currentOdpData.length;
     renderLoadInfo(missing, loadInfo);
+    renderEvidencePanel(noEvidence);
     renderRekonTable();
     document.getElementById('rekonStatusText').textContent =
       `Manual — ${rawLines.length} baris: ${currentOdpData.length} dimuat, ${missing.length} tidak ditemukan` +
+      (noEvidence.length ? `, ${noEvidence.length} tanpa eviden` : '') +
       (duplicateCount ? `, ${duplicateCount} duplikat` : '') +
       (emptyCount ? `, ${emptyCount} kosong` : '');
 
@@ -362,6 +369,12 @@
       `Dari ${rawLines.length} baris: ${currentOdpData.length} dimuat, ${missing.length} tidak ditemukan`,
       currentOdpData.length ? 'ok' : 'error'
     );
+    if (noEvidence.length) {
+      showToast(
+        `${noEvidence.length} ODP tanpa eviden tetap tampil di tabel, tetapi dikeluarkan dari generate — lihat panel di halaman`,
+        'normal'
+      );
+    }
     if (missing.length) {
       const preview = missing.slice(0, 3).map(m => m.name).join(', ');
       showToast(
