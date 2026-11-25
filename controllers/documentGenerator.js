@@ -1076,8 +1076,10 @@ async function generateRekonWord(odpList = [], options = {}) {
       // Kolom "NAMA LOP": prioritaskan Nama LOP (lokasi), sama seperti tampilan tabel saat load
       id_nama_lop: rk.id_nama_lop || lop.nama_lop || lop.id_ihld || name,
       witel_sto: branchSto,
-      foto_odp_luar: rk.foto_odp_luar || vl.eviden_odp_terbuka || '',
-      foto_odp_dalam: rk.foto_odp_dalam || vl.eviden_odp_tertutup || '',
+      // Sheet RESPON VALID 4: "Eviden ODP Tertutup" = foto tampak LUAR,
+      // "Eviden ODP Terbuka" = foto tampak DALAM (ODP dibuka).
+      foto_odp_luar: rk.foto_odp_luar || vl.eviden_odp_tertutup || '',
+      foto_odp_dalam: rk.foto_odp_dalam || vl.eviden_odp_terbuka || '',
       foto_joint_closure: rk.foto_joint_closure || vl.eviden_closure || '',
       foto_ps_1_4: rk.foto_ps_1_4 || vl.eviden_spliter || '',
       foto_lengkap: rk.foto_lengkap || vl.eviden_foto_lengkap || '',

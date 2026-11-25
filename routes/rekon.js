@@ -153,8 +153,8 @@ router.get('/api/sheet-list', (req, res) => {
         district: r.district || '-',
         tanggal: r.tanggal || '-',
         photos: {
-          foto_odp_luar: toUrl(rk.foto_odp_luar || r.eviden_odp_terbuka),
-          foto_odp_dalam: toUrl(rk.foto_odp_dalam || r.eviden_odp_tertutup),
+          foto_odp_luar: toUrl(rk.foto_odp_luar || r.eviden_odp_tertutup),
+          foto_odp_dalam: toUrl(rk.foto_odp_dalam || r.eviden_odp_terbuka),
           foto_joint_closure: toUrl(rk.foto_joint_closure || r.eviden_closure),
           foto_ps_1_4: toUrl(rk.foto_ps_1_4 || r.eviden_spliter),
           foto_lengkap: toUrl(rk.foto_lengkap || r.eviden_foto_lengkap),
@@ -186,8 +186,8 @@ router.get('/api/odp', (req, res) => {
 
     // Fallback photos dari eviden
     const photos = {
-      foto_odp_luar: toPhotoUrl(rekonRow?.foto_odp_luar || valRow?.eviden_odp_terbuka),
-      foto_odp_dalam: toPhotoUrl(rekonRow?.foto_odp_dalam || valRow?.eviden_odp_tertutup),
+      foto_odp_luar: toPhotoUrl(rekonRow?.foto_odp_luar || valRow?.eviden_odp_tertutup),
+      foto_odp_dalam: toPhotoUrl(rekonRow?.foto_odp_dalam || valRow?.eviden_odp_terbuka),
       foto_joint_closure: toPhotoUrl(rekonRow?.foto_joint_closure || valRow?.eviden_closure),
       foto_ps_1_4: toPhotoUrl(rekonRow?.foto_ps_1_4 || valRow?.eviden_spliter),
       foto_lengkap: toPhotoUrl(rekonRow?.foto_lengkap || valRow?.eviden_foto_lengkap),
