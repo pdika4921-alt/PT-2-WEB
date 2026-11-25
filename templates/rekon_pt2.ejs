@@ -22,6 +22,17 @@
         placeholder="ODP-BKS-014&#10;ODP-JTN-007&#10;ODP-CKR-021"
       ></textarea>
 
+      <div id="rekonMissingPanel" style="display:none; background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:10px 14px;">
+        <div style="font-size:12px; font-weight:700; color:#B91C1C;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="rekonMissingCount">0</span> ODP tidak ditemukan / gagal dimuat
+        </div>
+        <ul id="rekonMissingList" style="margin:8px 0 0; padding-left:18px; color:#7F1D1D; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;"></ul>
+        <div style="margin-top:6px; font-size:11px; color:#991B1B;">
+          ODP tersebut sudah dikeluarkan dari daftar di atas dan tidak ikut dimuat / digenerate.
+        </div>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div style="display:flex; gap:10px;">
           <button type="button" id="btnLoadRekon" class="btn-pill btn-primary">
@@ -185,6 +196,26 @@
   let sheetSize = 10;
   let sheetFilter = '';
 
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function renderMissingPanel(missing) {
+    const panel = document.getElementById('rekonMissingPanel');
+    const list = document.getElementById('rekonMissingList');
+    if (!panel || !list) return;
+    document.getElementById('rekonMissingCount').textContent = String(missing.length);
+    list.innerHTML = missing.map(m => {
+      const reason = m.reason && m.reason !== 'tidak ditemukan'
+        ? ` <span style="color:#B91C1C">(${escapeHtml(m.reason)})</span>`
+        : '';
+      return `<li>${escapeHtml(m.name)}${reason}</li>`;
+    }).join('');
+    panel.style.display = missing.length ? 'block' : 'none';
+  }
+
   async function loadOdpData() {
     const text = document.getElementById('rekonOdpList').value;
     const odpList = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
@@ -199,6 +230,8 @@
     showRekonLoading('Memuat data ODP... mohon tunggu sampai selesai');
 
     currentOdpData = [];
+    const missing = [];
+    const validNames = [];
 
     try {
       for (let i = 0; i < odpList.length; i++) {
@@ -206,25 +239,46 @@
         try {
           const res = await fetch(`/rekon/api/odp?odp=${encodeURIComponent(odp)}`);
           const json = await res.json();
-          if (json.ok) {
+          if (json.ok && json.found !== false) {
+            validNames.push(odp);
             currentOdpData.push({
-              no: i + 1,
+              no: currentOdpData.length + 1,
               odp_name: odp,
               id_nama_lop: json.db?.nama_lop || json.rekon?.id_nama_lop || 'LOP-' + odp,
               witel_sto: json.db?.sto || json.rekon?.witel_sto || 'BKS',
               photos: json.photos || {}
             });
+          } else {
+            missing.push({ name: odp, reason: 'tidak ditemukan' });
           }
         } catch (e) {
           console.error(e);
+          missing.push({ name: odp, reason: 'gagal dimuat' });
         }
       }
     } finally {
       hideRekonLoading();
     }
 
+    // Keluarkan ODP yang tidak ditemukan dari textarea agar tidak ikut digenerate
+    if (missing.length) {
+      document.getElementById('rekonOdpList').value = validNames.join('\n');
+    }
+
+    renderMissingPanel(missing);
     renderRekonTable();
-    showToast(`Berhasil memuat ${currentOdpData.length} data ODP`, 'ok');
+    document.getElementById('rekonStatusText').textContent = missing.length
+      ? `Manual — ${currentOdpData.length} ODP dimuat, ${missing.length} tidak ditemukan / gagal dimuat`
+      : `Manual — ${currentOdpData.length} ODP dimuat`;
+
+    showToast(`Berhasil memuat ${currentOdpData.length} data ODP`, currentOdpData.length ? 'ok' : 'error');
+    if (missing.length) {
+      const preview = missing.slice(0, 3).map(m => m.name).join(', ');
+      showToast(
+        `${missing.length} ODP tidak ditemukan / gagal dimuat: ${preview}${missing.length > 3 ? ', …' : ''} — lihat daftar lengkap di halaman`,
+        'error'
+      );
+    }
   }
 
   function photoCellsHtml(item) {
@@ -277,6 +331,7 @@
 
   // ===== MODE SHEET: ambil dari Google Sheet RESPON VALID 4 =====
   async function loadFromSheet() {
+    renderMissingPanel([]);
     const tbody = document.getElementById('rekonTableBody');
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Mengambil data dari sheet RESPON VALID 4...</td></tr>`;
     document.getElementById('rekonStatusText').textContent = 'Mengambil data dari sheet...';

@@ -13,6 +13,7 @@ router.get('/', (req, res) => {
 
     let rows = [];
     let missing = [];
+    let cleanOdpList = [];
     if (filtered) {
       const placeholders = odpList.map(() => '?').join(',');
       // Ambil SEMUA yang cocok (tanpa LIMIT 500), urut id DESC supaya dedupe ambil data terbaru
@@ -30,6 +31,8 @@ router.get('/', (req, res) => {
       // Susun sesuai urutan daftar yang diminta agar presisi
       rows = odpList.map(n => byName.get(n.toUpperCase())).filter(Boolean);
       missing = odpList.filter(n => !byName.has(n.toUpperCase()));
+      // Daftar yang dikembalikan ke textarea hanya yang benar-benar ditemukan
+      cleanOdpList = odpList.filter(n => byName.has(n.toUpperCase()));
     }
     // Tanpa daftar ODP: tabel kosong (tanpa auto-load data)
 
@@ -38,7 +41,8 @@ router.get('/', (req, res) => {
       title: 'VALID 4 — Management Core FO',
       rows,
       totalCount: rows.length,
-      odpList,
+      odpList: cleanOdpList,
+      requestedCount: odpList.length,
       missing,
       filtered
     });

@@ -179,9 +179,10 @@ router.get('/api/odp', (req, res) => {
       return res.status(400).json({ ok: false, error: 'Parameter odp diperlukan' });
     }
 
-    const dbRow = db.prepare('SELECT * FROM database_pt2 WHERE odp_name = ?').get(odp);
-    const rekonRow = db.prepare('SELECT * FROM rekon_pt2 WHERE odp_name = ?').get(odp);
-    const valRow = db.prepare('SELECT * FROM validasi_pekerjaan WHERE nama_odp = ? ORDER BY id DESC').get(odp);
+    const dbRow = db.prepare('SELECT * FROM database_pt2 WHERE odp_name = ? COLLATE NOCASE').get(odp);
+    const rekonRow = db.prepare('SELECT * FROM rekon_pt2 WHERE odp_name = ? COLLATE NOCASE').get(odp);
+    const valRow = db.prepare('SELECT * FROM validasi_pekerjaan WHERE nama_odp = ? COLLATE NOCASE ORDER BY id DESC').get(odp);
+    const found = Boolean(dbRow || rekonRow || valRow);
 
     // Fallback photos dari eviden
     const photos = {
@@ -197,6 +198,8 @@ router.get('/api/odp', (req, res) => {
 
     return res.json({
       ok: true,
+      found,
+      odp,
       db: dbRow || null,
       rekon: rekonRow || null,
       photos

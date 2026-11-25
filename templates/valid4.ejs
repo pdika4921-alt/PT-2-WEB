@@ -5,6 +5,7 @@
   const _odpList = (typeof odpList !== 'undefined' && Array.isArray(odpList)) ? odpList : [];
   const _missing = (typeof missing !== 'undefined' && Array.isArray(missing)) ? missing : [];
   const _filtered = (typeof filtered !== 'undefined') ? filtered : _odpList.length > 0;
+  const _requestedCount = (typeof requestedCount !== 'undefined') ? requestedCount : _odpList.length;
 %>
 
 <main style="display: flex; flex-direction: column; gap: 14px;">
@@ -28,6 +29,21 @@
         style="width:100%; height:80px; background:#F3F4F6; border:1px solid transparent; border-radius:20px; padding:12px 18px; font-family:'JetBrains Mono', monospace; font-size:13px; outline:none; resize:vertical;" 
         placeholder="Contoh:&#10;ODP-BKS-014&#10;ODP-JTN-007&#10;ODP-KBY-005"
       ><%= _odpList.join('\n') %></textarea>
+
+      <% if (_missing.length) { %>
+        <details open style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:10px 14px;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#B91C1C;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <%= _missing.length %> ODP tidak ditemukan — klik untuk sembunyikan
+          </summary>
+          <ul style="margin:8px 0 0; padding-left:18px; color:#7F1D1D; font-size:12px; font-family:'JetBrains Mono', monospace; max-height:180px; overflow:auto;">
+            <% _missing.forEach(function(m) { %><li><%= m %></li><% }); %>
+          </ul>
+          <div style="margin-top:6px; font-size:11px; color:#991B1B;">
+            ODP tersebut sudah dikeluarkan dari daftar di atas dan tidak ikut dimuat / digenerate.
+          </div>
+        </details>
+      <% } %>
 
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -68,7 +84,7 @@
       <div style="font-size:12px; color:var(--ink-2);">
         <% if (_filtered) { %>
           Data dimuat: <b><%= rows.length %></b> item
-          <span style="color:var(--ink-2);">dari <%= _odpList.length %> nama ODP</span>
+          <span style="color:var(--ink-2);">dari <%= _requestedCount %> nama ODP yang diminta</span>
           <% if (_missing.length) { %>
             <span style="color:#DC2626;"> — <%= _missing.length %> tidak ditemukan</span>
           <% } %>
@@ -241,7 +257,7 @@
       const found = <%= rows.length %>;
       showToast(`Memuat ${found} ODP yang sesuai daftar`, 'ok');
       if (missing.length) {
-        showToast(`${missing.length} ODP tidak ditemukan: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''}`, 'error');
+        showToast(`${missing.length} ODP tidak ditemukan: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''} — lihat daftar lengkap di halaman`, 'error');
       }
     <% } %>
   });
