@@ -19,14 +19,45 @@ const {
 // Nama ODP boleh mengandung "/" (contoh: ODP-CSR-FC/51) — amankan untuk nama file
 const safeName = (s) => String(s || 'odp').replace(/[\\/:*?"<>|]+/g, '-');
 
-// Batasi semua generate maksimal 100 baris/ODP per request.
+// Generate maksimal 100 baris per file. Kalau lebih, dibagi beberapa file lalu di-zip.
 const GENERATE_MAX = 100;
-function clampGenerateItems(items, res, label) {
-  if (items.length <= GENERATE_MAX) return items;
-  console.warn(`${label}: ${items.length} data diterima, dibatasi ${GENERATE_MAX}.`);
+function splitGenerateItems(items, res, label) {
+  if (items.length <= GENERATE_MAX) return [items];
+  const total = Math.ceil(items.length / GENERATE_MAX);
+  console.log(`${label}: ${items.length} data dibagi ${total} file @${GENERATE_MAX}.`);
   res.setHeader('X-Generate-Limit', String(GENERATE_MAX));
+  res.setHeader('X-Generate-Chunks', String(total));
   res.setHeader('X-Requested-Count', String(items.length));
-  return items.slice(0, GENERATE_MAX);
+  const chunks = [];
+  for (let i = 0; i < items.length; i += GENERATE_MAX) {
+    chunks.push(items.slice(i, i + GENERATE_MAX));
+  }
+  return chunks;
+}
+
+async function sendChunkedZip(res, chunks, ext, generateFn, baseName) {
+  const ts = Date.now();
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${baseName}_${ts}_parts.zip"`);
+  const archive = archiver('zip', { zlib: { level: 1 } });
+  archive.on('error', (err) => {
+    console.error('Archive error:', err);
+    if (!res.headersSent) return res.status(500).json({ ok: false, error: err.message });
+    res.destroy(err);
+  });
+  archive.pipe(res);
+
+  for (let i = 0; i < chunks.length; i += 1) {
+    const result = await generateFn(chunks[i]);
+    const raw = result && result.buffer ? result.buffer : result;
+    const buffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    const fileExt = result && result.ext ? result.ext : ext;
+    archive.append(buffer, {
+      name: `${baseName}_${ts}_part${i + 1}.${fileExt}`,
+      store: true
+    });
+  }
+  await archive.finalize();
 }
 
 // Merge item dari request body dengan baris DB lengkap (frontend hanya kirim id + field editable)
@@ -385,8 +416,22 @@ router.post('/valid4/generate', async (req, res) => {
       items = hydrateItems(items);
     }
 
-    items = clampGenerateItems(items, res, 'valid4/pdf');
-    const result = await generateValid4Pdf(items, Boolean(skipImages));
+    const chunks = splitGenerateItems(items, res, 'valid4/pdf');
+    if (chunks.length > 1) {
+      await sendChunkedZip(
+        res,
+        chunks,
+        'pdf',
+        (chunk) => generateValid4Pdf(chunk, Boolean(skipImages)).then((r) => ({
+          ...r,
+          ext: r.type === 'application/pdf' ? 'pdf' : 'html'
+        })),
+        'VALID4_MANCORE'
+      );
+      return;
+    }
+
+    const result = await generateValid4Pdf(chunks[0], Boolean(skipImages));
     res.setHeader('Content-Type', result.type);
     res.setHeader('Content-Disposition', `attachment; filename="VALID4_MANCORE_${Date.now()}.${result.type === 'application/pdf' ? 'pdf' : 'html'}"`);
     return res.send(result.buffer);
@@ -407,8 +452,19 @@ router.post('/valid4/generate-excel', async (req, res) => {
       items = hydrateItems(items);
     }
 
-    items = clampGenerateItems(items, res, 'valid4/excel');
-    const buffer = await generateValid4Excel(items, Boolean(skipImages), Boolean(tableOnly));
+    const chunks = splitGenerateItems(items, res, 'valid4/excel');
+    if (chunks.length > 1) {
+      await sendChunkedZip(
+        res,
+        chunks,
+        'xlsx',
+        (chunk) => generateValid4Excel(chunk, Boolean(skipImages), Boolean(tableOnly)),
+        'VALID4_MANCORE'
+      );
+      return;
+    }
+
+    const buffer = await generateValid4Excel(chunks[0], Boolean(skipImages), Boolean(tableOnly));
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="VALID4_MANCORE_${Date.now()}.xlsx"`);
     return res.send(buffer);
@@ -429,7 +485,7 @@ router.post('/valid4/generate-image', async (req, res) => {
       items = hydrateItems(items);
     }
 
-    items = clampGenerateItems(items, res, 'valid4/image');
+    // Gambar sudah dikirim sebagai satu ZIP, jadi tidak perlu dipotong per 100.
 
     if (items.length === 1) {
       const item = items[0];

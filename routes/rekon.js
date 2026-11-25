@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const archiver = require('archiver');
 const db = require('../db/connection');
 const config = require('../config');
 const { generateRekonWord } = require('../controllers/documentGenerator');
@@ -36,6 +37,46 @@ const WHITELIST_FIELDS = [
   'foto_sivdum',
   'foto_mancore'
 ];
+
+// Generate Word maksimal 100 ODP per file; sisanya jadi beberapa file di dalam ZIP.
+const GENERATE_MAX = 100;
+function splitWordChunks(list, res) {
+  if (list.length <= GENERATE_MAX) return [list];
+  const total = Math.ceil(list.length / GENERATE_MAX);
+  console.log(`generate-word: ${list.length} ODP dibagi ${total} file @${GENERATE_MAX}.`);
+  res.setHeader('X-Generate-Limit', String(GENERATE_MAX));
+  res.setHeader('X-Generate-Chunks', String(total));
+  res.setHeader('X-Requested-Count', String(list.length));
+  const chunks = [];
+  for (let i = 0; i < list.length; i += GENERATE_MAX) {
+    chunks.push(list.slice(i, i + GENERATE_MAX));
+  }
+  return chunks;
+}
+
+async function sendWordZip(res, chunks, title) {
+  const ts = Date.now();
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="REKON_PT2_${ts}_parts.zip"`);
+  const archive = archiver('zip', { zlib: { level: 1 } });
+  archive.on('error', (err) => {
+    console.error('Archive error:', err);
+    if (!res.headersSent) return res.status(500).json({ ok: false, error: err.message });
+    res.destroy(err);
+  });
+  archive.pipe(res);
+
+  const cleanTitle = typeof title === 'string' ? title.trim() : '';
+  for (let i = 0; i < chunks.length; i += 1) {
+    const raw = await generateRekonWord(chunks[i], { title: cleanTitle });
+    const buffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    archive.append(buffer, {
+      name: `REKON_PT2_${ts}_part${i + 1}.docx`,
+      store: true
+    });
+  }
+  await archive.finalize();
+}
 
 // Ubah URL eksternal (Google Drive open?id= dll) menjadi /api/proxy-image agar bisa tampil sebagai <img>
 const toPhotoUrl = (u) => {
@@ -267,18 +308,16 @@ router.post('/api/generate-word', async (req, res) => {
   try {
     const { odpList, title } = req.body;
     const list = Array.isArray(odpList) ? odpList : (odpList ? odpList.split(',').map(s => s.trim()) : []);
+    const cleanTitle = typeof title === 'string' ? title.trim() : '';
 
-    // Batasi generate word maksimal 100 ODP per request.
-    let finalList = list;
-    if (list.length > 100) {
-      console.warn(`generate-word: ${list.length} ODP diterima, dibatasi 100.`);
-      res.setHeader('X-Generate-Limit', '100');
-      res.setHeader('X-Requested-Count', String(list.length));
-      finalList = list.slice(0, 100);
+    const chunks = splitWordChunks(list, res);
+    if (chunks.length > 1) {
+      await sendWordZip(res, chunks, cleanTitle);
+      return;
     }
 
     // Judul opsional; bila kosong akan memakai judul dari templates/masterpt2.docx
-    const buffer = await generateRekonWord(finalList, { title: typeof title === 'string' ? title.trim() : '' });
+    const buffer = await generateRekonWord(chunks[0], { title: cleanTitle });
     const filename = `REKON_PT2_${Date.now()}.docx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
