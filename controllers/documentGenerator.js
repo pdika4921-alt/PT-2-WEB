@@ -954,6 +954,77 @@ async function rasterizeSvgBuffer(buf) {
   }
 }
 
+let _compressPagePromise = null;
+async function getCompressionPage() {
+  if (_compressPagePromise) {
+    try {
+      const page = await _compressPagePromise;
+      if (page && !page.isClosed()) return page;
+    } catch (_) { /* lanjut buat baru */ }
+  }
+  _compressPagePromise = (async () => {
+    const browser = await getSharedBrowser();
+    return browser.newPage();
+  })();
+  try {
+    return await _compressPagePromise;
+  } catch (e) {
+    _compressPagePromise = null;
+    throw e;
+  }
+}
+
+// Satu halaman Chromium dipakai bergantian. Antrean ini mencegah beberapa
+// worker fetch mengirim evaluate bersamaan ke halaman yang sama.
+let _compressChain = Promise.resolve();
+function runOnCompressionPage(fn) {
+  const result = _compressChain.then(fn, fn);
+  _compressChain = result.catch(() => {});
+  return result;
+}
+
+/** Kecilkan byte foto sebelum disisipkan ke DOCX.
+ *  Tampilan di tabel tetap diatur oleh transformation; ini hanya mencegah DOCX
+ *  membengkak menjadi puluhan MB sehingga sering terpotong saat diunduh. */
+async function compressRekonImageBuffer(buf, maxDim = 1000, quality = 0.72) {
+  if (!buf || buf.length < 100 * 1024) return buf;
+  const meta = detectImageBuffer(buf);
+  if (!meta || meta.type === 'svg') return buf;
+
+  return runOnCompressionPage(async () => {
+    try {
+      const page = await getCompressionPage();
+      const mime = meta.type === 'png' ? 'image/png'
+        : meta.type === 'gif' ? 'image/gif'
+        : meta.type === 'bmp' ? 'image/bmp'
+        : 'image/jpeg';
+      const b64 = buf.toString('base64');
+      const compressedB64 = await page.evaluate(async ({ b64, mime, maxDim, quality }) => {
+        const img = new Image();
+        img.src = `data:${mime};base64,${b64}`;
+        await img.decode();
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        const width = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+        const height = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', quality).split(',')[1] || '';
+      }, { b64, mime, maxDim, quality });
+
+      if (!compressedB64) return buf;
+      const out = Buffer.from(compressedB64, 'base64');
+      return out.length > 0 && out.length < buf.length ? out : buf;
+    } catch (e) {
+      return buf;
+    }
+  });
+}
+
 async function mapLimit(items, limit, worker) {
   const results = new Array(items.length);
   let cursor = 0;
@@ -980,6 +1051,7 @@ async function fetchRekonImageMap(urls, limit = 8) {
         const png = await rasterizeSvgBuffer(buf);
         if (png && png.length > 0) buf = png;
       }
+      buf = await compressRekonImageBuffer(buf);
     }
     map.set(url, buf && buf.length > 0 ? buf : null);
   });

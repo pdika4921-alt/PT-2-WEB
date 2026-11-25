@@ -53,8 +53,9 @@ const VALIDASI_PHOTO_FIELDS = [
 const hasAnyPhoto = (row, fields) =>
   fields.some(f => String((row && row[f]) || '').trim() !== '');
 
-// Generate Word maksimal 100 ODP per file; sisanya jadi beberapa file di dalam ZIP.
-const GENERATE_MAX = 100;
+// Generate Word maksimal 50 ODP per file; sisanya jadi beberapa file di dalam ZIP.
+// 100 ODP menghasilkan DOCX ±68 MB dan sering terpotong saat diunduh dari shared host.
+const GENERATE_MAX = 50;
 function splitWordChunks(list, res) {
   if (list.length <= GENERATE_MAX) return [list];
   const total = Math.ceil(list.length / GENERATE_MAX);
